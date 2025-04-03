@@ -288,16 +288,47 @@ export class GameScene extends Phaser.Scene {
 
     // Check if the current direction is blocked by a wall
     let isCurrentDirectionBlocked = false;
+    let nextTileX = currentTileX;
+    let nextTileY = currentTileY;
+    let distanceToWall = 1;
+    
     if (this.currentDirection) {
-      const nextTileX = currentTileX + (this.currentDirection === 'right' ? 1 : this.currentDirection === 'left' ? -1 : 0);
-      const nextTileY = currentTileY + (this.currentDirection === 'down' ? 1 : this.currentDirection === 'up' ? -1 : 0);
+      // Calculate the next tile position based on current direction
+      nextTileX = currentTileX + (this.currentDirection === 'right' ? 1 : this.currentDirection === 'left' ? -1 : 0);
+      nextTileY = currentTileY + (this.currentDirection === 'down' ? 1 : this.currentDirection === 'up' ? -1 : 0);
       
+      // Check if next tile is a wall
       isCurrentDirectionBlocked = 
         nextTileX < 0 || 
         nextTileX >= MAZE_LAYOUT[0].length ||
         nextTileY < 0 || 
         nextTileY >= MAZE_LAYOUT.length ||
         MAZE_LAYOUT[nextTileY][nextTileX] === TileType.WALL;
+
+      // Calculate distance to the edge of current tile
+      if (isCurrentDirectionBlocked) {
+        const currentTileEdgeX = this.currentDirection === 'right' ? 
+          (currentTileX + 1) * TILE_SIZE :
+          currentTileX * TILE_SIZE;
+        const currentTileEdgeY = this.currentDirection === 'down' ? 
+          (currentTileY + 1) * TILE_SIZE :
+          currentTileY * TILE_SIZE;
+
+        switch (this.currentDirection) {
+          case 'right':
+            distanceToWall = currentTileEdgeX - this.player.x;
+            break;
+          case 'left':
+            distanceToWall = this.player.x - currentTileEdgeX;
+            break;
+          case 'down':
+            distanceToWall = currentTileEdgeY - this.player.y;
+            break;
+          case 'up':
+            distanceToWall = this.player.y - currentTileEdgeY;
+            break;
+        }
+      }
     }
 
     // Store the next direction based on input
@@ -341,43 +372,51 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Always try to center the player on the path while moving
-    if (this.currentDirection === 'left' || this.currentDirection === 'right') {
-      // When moving horizontally, maintain vertical center
-      const targetY = currentTileY * TILE_SIZE + TILE_SIZE / 2;
-      if (Math.abs(this.player.y - targetY) > 1) {
-        this.player.y = Phaser.Math.Linear(this.player.y, targetY, 0.2);
-      }
-    } else if (this.currentDirection === 'up' || this.currentDirection === 'down') {
-      // When moving vertically, maintain horizontal center
-      const targetX = currentTileX * TILE_SIZE + TILE_SIZE / 2;
-      if (Math.abs(this.player.x - targetX) > 1) {
-        this.player.x = Phaser.Math.Linear(this.player.x, targetX, 0.2);
+    // Center the player when approaching a wall or while moving
+    const targetX = currentTileX * TILE_SIZE + TILE_SIZE / 2;
+    const targetY = currentTileY * TILE_SIZE + TILE_SIZE / 2;
+    
+    // Stop early when approaching a wall
+    const stopDistance = TILE_SIZE * 0.4; // Stop when close to tile edge
+    if (isCurrentDirectionBlocked && distanceToWall < stopDistance) {
+      // Force centering on current tile
+      this.player.x = targetX;
+      this.player.y = targetY;
+      this.currentDirection = null;
+    } else {
+      // Normal movement centering
+      if (this.currentDirection === 'left' || this.currentDirection === 'right') {
+        // When moving horizontally, maintain vertical center
+        if (Math.abs(this.player.y - targetY) > 1) {
+          this.player.y = Phaser.Math.Linear(this.player.y, targetY, 0.2);
+        }
+      } else if (this.currentDirection === 'up' || this.currentDirection === 'down') {
+        // When moving vertically, maintain horizontal center
+        if (Math.abs(this.player.x - targetX) > 1) {
+          this.player.x = Phaser.Math.Linear(this.player.x, targetX, 0.2);
+        }
       }
     }
 
     // Reset velocity
     this.player.setVelocity(0);
 
-    // Move in the current direction
-    switch (this.currentDirection) {
-      case 'left':
-        this.player.setVelocityX(-speed);
-        break;
-      case 'right':
-        this.player.setVelocityX(speed);
-        break;
-      case 'up':
-        this.player.setVelocityY(-speed);
-        break;
-      case 'down':
-        this.player.setVelocityY(speed);
-        break;
-    }
-
-    // Only reset direction if we're blocked and not trying to move in a new direction
-    if (isCurrentDirectionBlocked && !this.nextDirection) {
-      this.currentDirection = null;
+    // Move in the current direction if not blocked or if we haven't reached the stop distance
+    if (this.currentDirection && (!isCurrentDirectionBlocked || distanceToWall >= stopDistance)) {
+      switch (this.currentDirection) {
+        case 'left':
+          this.player.setVelocityX(-speed);
+          break;
+        case 'right':
+          this.player.setVelocityX(speed);
+          break;
+        case 'up':
+          this.player.setVelocityY(-speed);
+          break;
+        case 'down':
+          this.player.setVelocityY(speed);
+          break;
+      }
     }
   }
 
