@@ -6,7 +6,11 @@ export class Pinky extends Ghost {
         super(scene, x, y, 'ghost-pinky', GhostType.PINKY);
     }
 
-    protected getTarget(player: Phaser.Physics.Arcade.Sprite): Phaser.Math.Vector2 {
+    protected getTarget(player: Phaser.Physics.Arcade.Sprite | null): Phaser.Math.Vector2 {
+        if (!player) {
+            return this.scatterTarget;
+        }
+        
         if (this.state === GhostState.SCATTER) {
             return this.scatterTarget;
         }

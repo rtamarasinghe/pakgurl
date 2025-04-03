@@ -1,4 +1,6 @@
 import { TILE_SIZE } from '../../config/mazeConfig';
+import { MAZE_LAYOUT } from '../../config/mazeConfig';
+import { TileType } from '../../config/mazeConfig';
 
 export enum GhostState {
     CHASE = 'chase',
@@ -141,7 +143,20 @@ export abstract class Ghost {
         return new Phaser.Math.Vector2(this.sprite.x, this.sprite.y);
     }
 
-    public update(player: Phaser.Physics.Arcade.Sprite): void {
+    public update(player: Phaser.Physics.Arcade.Sprite | null): void {
+        if (!player?.body) {
+            if (this.ghostHouse) {
+                this.updateGhostHouseBehavior();
+            } else {
+                // If not in ghost house and no player, just continue in current direction
+                this.sprite.setVelocity(
+                    this.currentDirection.x * this.speed,
+                    this.currentDirection.y * this.speed
+                );
+            }
+            return;
+        }
+
         if (this.ghostHouse) {
             this.updateGhostHouseBehavior();
             return;
@@ -149,9 +164,22 @@ export abstract class Ghost {
 
         // Get the target based on current state and behavior
         const target = this.getTarget(player);
+        if (!target) {
+            // If no target, continue in current direction
+            this.sprite.setVelocity(
+                this.currentDirection.x * this.speed,
+                this.currentDirection.y * this.speed
+            );
+            return;
+        }
         
         // Get valid directions at current position
         const validDirections = this.getValidDirections();
+        if (!validDirections.length) {
+            // If no valid directions, stop moving
+            this.sprite.setVelocity(0, 0);
+            return;
+        }
         
         // Choose the best direction
         const newDirection = this.chooseBestDirection(validDirections, target);
@@ -184,17 +212,27 @@ export abstract class Ghost {
                 return false;
             }
 
-            // Check for wall collisions (you'll need to implement this based on your maze system)
-            const nextX = this.sprite.x + dir.x * TILE_SIZE;
-            const nextY = this.sprite.y + dir.y * TILE_SIZE;
-            
-            // Return true if no wall in this direction
-            return true; // Placeholder - implement wall checking
+            // Get current tile position
+            const currentTileX = Math.floor(this.sprite.x / TILE_SIZE);
+            const currentTileY = Math.floor(this.sprite.y / TILE_SIZE);
+
+            // Calculate next tile position
+            const nextTileX = currentTileX + dir.x;
+            const nextTileY = currentTileY + dir.y;
+
+            // Check if next tile is within bounds and not a wall
+            return nextTileX >= 0 && 
+                   nextTileX < MAZE_LAYOUT[0].length &&
+                   nextTileY >= 0 && 
+                   nextTileY < MAZE_LAYOUT.length &&
+                   MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL;
         });
     }
 
     protected chooseBestDirection(validDirections: Phaser.Math.Vector2[], target: Phaser.Math.Vector2): Phaser.Math.Vector2 {
-        if (validDirections.length === 0) return this.currentDirection;
+        if (!validDirections.length || !target) {
+            return this.currentDirection;
+        }
 
         if (this.state === GhostState.FRIGHTENED) {
             // Choose a random valid direction when frightened
@@ -202,23 +240,30 @@ export abstract class Ghost {
         }
 
         // Choose the direction that gets us closest to the target
-        return validDirections.reduce((best, current) => {
-            const currentDist = Phaser.Math.Distance.Between(
-                this.sprite.x + current.x * TILE_SIZE,
-                this.sprite.y + current.y * TILE_SIZE,
-                target.x,
-                target.y
-            );
-            
-            const bestDist = Phaser.Math.Distance.Between(
-                this.sprite.x + best.x * TILE_SIZE,
-                this.sprite.y + best.y * TILE_SIZE,
+        let bestDirection = validDirections[0];
+        let bestDistance = Phaser.Math.Distance.Between(
+            this.sprite.x + bestDirection.x * TILE_SIZE,
+            this.sprite.y + bestDirection.y * TILE_SIZE,
+            target.x,
+            target.y
+        );
+
+        for (let i = 1; i < validDirections.length; i++) {
+            const direction = validDirections[i];
+            const distance = Phaser.Math.Distance.Between(
+                this.sprite.x + direction.x * TILE_SIZE,
+                this.sprite.y + direction.y * TILE_SIZE,
                 target.x,
                 target.y
             );
 
-            return currentDist < bestDist ? current : best;
-        });
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestDirection = direction;
+            }
+        }
+
+        return bestDirection;
     }
 
     protected updateGhostHouseBehavior(): void {
@@ -233,7 +278,11 @@ export abstract class Ghost {
 
     public exitGhostHouse(): void {
         this.ghostHouse = false;
-        // Implement exit animation/movement
+        // Move slightly upward to clear the ghost house
+        this.sprite.setPosition(this.startPosition.x, this.startPosition.y - TILE_SIZE);
+        // Start with upward movement
+        this.currentDirection = new Phaser.Math.Vector2(0, -1);
+        this.setState(GhostState.SCATTER);
     }
 
     public returnToGhostHouse(): void {

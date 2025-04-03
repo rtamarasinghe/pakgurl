@@ -23,11 +23,13 @@ export class GhostManager {
     private currentPatternIndex = 0;
     private frightenedTimer: Phaser.Time.TimerEvent | null = null;
     private readonly FRIGHTENED_DURATION = 8000; // 8 seconds
+    private ghostReleaseTimers: Phaser.Time.TimerEvent[] = [];
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.initializeGhosts();
         this.startModeTimer();
+        this.scheduleGhostReleases();
     }
 
     private initializeGhosts(): void {
@@ -68,7 +70,7 @@ export class GhostManager {
         });
     }
 
-    public update(player: Phaser.Physics.Arcade.Sprite): void {
+    public update(player: Phaser.Physics.Arcade.Sprite | null): void {
         this.ghosts.forEach(ghost => ghost.update(player));
     }
 
@@ -130,9 +132,40 @@ export class GhostManager {
         });
     }
 
+    private scheduleGhostReleases(): void {
+        // Clear any existing timers
+        this.ghostReleaseTimers.forEach(timer => timer.destroy());
+        this.ghostReleaseTimers = [];
+
+        // Release Blinky immediately
+        this.ghosts[0].exitGhostHouse();
+
+        // Release Pinky after 3 seconds
+        this.ghostReleaseTimers.push(
+            this.scene.time.delayedCall(3000, () => {
+                this.ghosts[1].exitGhostHouse();
+            })
+        );
+
+        // Release Inky after 6 seconds
+        this.ghostReleaseTimers.push(
+            this.scene.time.delayedCall(6000, () => {
+                this.ghosts[2].exitGhostHouse();
+            })
+        );
+
+        // Release Clyde after 9 seconds
+        this.ghostReleaseTimers.push(
+            this.scene.time.delayedCall(9000, () => {
+                this.ghosts[3].exitGhostHouse();
+            })
+        );
+    }
+
     public resetGhosts(): void {
         this.ghosts.forEach(ghost => ghost.returnToGhostHouse());
         this.currentPatternIndex = 0;
         this.startModeTimer();
+        this.scheduleGhostReleases();
     }
 } 
