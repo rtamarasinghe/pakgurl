@@ -13,7 +13,7 @@
 - [x] Replace current walls with proper maze
 - [x] Implement tile-based collision system
 - [x] Add teleport tunnels on sides
-- [ ] Add visual polish to maze walls
+- [x] Add visual polish to maze walls
 - [x] Add teleport animation effects
 - [x] Add particle effects for teleportation
 
