@@ -1,6 +1,9 @@
+import { MAZE_LAYOUT, TILE_SIZE, TileType, MAZE_WIDTH, MAZE_HEIGHT } from '../config/mazeConfig';
+
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private walls!: Phaser.Physics.Arcade.StaticGroup;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -11,6 +14,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image('player', 'assets/player.png');
     this.load.image('wall', 'assets/wall.png');
     this.load.image('dot', 'assets/dot.png');
+    this.load.image('power-pellet', 'assets/power-pellet.png');
   }
 
   create(): void {
@@ -19,10 +23,21 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Add player
-    this.player = this.physics.add.sprite(400, 300, 'player');
+    // Set world bounds
+    this.physics.world.setBounds(0, 0, MAZE_WIDTH, MAZE_HEIGHT);
+
+    // Create maze
+    this.createMaze();
+
+    // Add player at starting position (center bottom of maze)
+    const playerStartX = MAZE_WIDTH / 2;
+    const playerStartY = MAZE_HEIGHT - 1.5 * TILE_SIZE;
+    this.player = this.physics.add.sprite(playerStartX, playerStartY, 'player');
+    
     if (this.player) {
       this.player.setCollideWorldBounds(true);
+      // Make player slightly smaller than tile size
+      this.player.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
     }
 
     // Setup keyboard controls
@@ -32,39 +47,61 @@ export class GameScene extends Phaser.Scene {
     }
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Add some walls (temporary)
-    const walls = this.physics.add.staticGroup();
-    if (walls) {
-      const wall1 = walls.create(100, 100, 'wall');
-      const wall2 = walls.create(700, 100, 'wall');
-      const wall3 = walls.create(100, 500, 'wall');
-      const wall4 = walls.create(700, 500, 'wall');
-
-      // Add collision between player and walls
-      if (this.player && wall1 && wall2 && wall3 && wall4) {
-        this.physics.add.collider(this.player, walls);
-      }
+    // Add collision between player and walls
+    if (this.player && this.walls) {
+      this.physics.add.collider(this.player, this.walls);
     }
+  }
+
+  private createMaze(): void {
+    // Create static group for walls
+    this.walls = this.physics.add.staticGroup();
+
+    // Create the maze based on the layout
+    MAZE_LAYOUT.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        const pixelX = x * TILE_SIZE + TILE_SIZE / 2;
+        const pixelY = y * TILE_SIZE + TILE_SIZE / 2;
+
+        switch (tile) {
+          case TileType.WALL:
+            const wall = this.walls.create(pixelX, pixelY, 'wall');
+            wall.setDisplaySize(TILE_SIZE, TILE_SIZE);
+            break;
+          case TileType.GHOST_HOUSE:
+            // We'll implement ghost house later
+            break;
+          case TileType.POWER_PELLET:
+            // We'll implement power pellets later
+            break;
+          case TileType.TELEPORT:
+            // We'll implement teleport points later
+            break;
+        }
+      });
+    });
   }
 
   update(): void {
     if (!this.player || !this.cursors) return;
 
     // Handle player movement
+    const speed = 160;
+
+    // Reset velocity
+    this.player.setVelocity(0);
+
+    // Handle player movement
     if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-160);
+      this.player.setVelocityX(-speed);
     } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(160);
-    } else {
-      this.player.setVelocityX(0);
+      this.player.setVelocityX(speed);
     }
 
     if (this.cursors.up.isDown) {
-      this.player.setVelocityY(-160);
+      this.player.setVelocityY(-speed);
     } else if (this.cursors.down.isDown) {
-      this.player.setVelocityY(160);
-    } else {
-      this.player.setVelocityY(0);
+      this.player.setVelocityY(speed);
     }
   }
 } 

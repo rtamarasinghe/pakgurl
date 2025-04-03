@@ -9,9 +9,9 @@
 - [ ] Add visual feedback for pellet collection
 
 ## Maze Layout
-- [ ] Design maze layout using tiles
-- [ ] Replace current walls with proper maze
-- [ ] Implement tile-based collision system
+- [x] Design maze layout using tiles
+- [x] Replace current walls with proper maze
+- [x] Implement tile-based collision system
 - [ ] Add teleport tunnels on sides
 - [ ] Add visual polish to maze walls
 
