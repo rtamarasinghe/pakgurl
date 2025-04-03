@@ -305,39 +305,67 @@ export class GameScene extends Phaser.Scene {
     
     // Update player rotation based on direction
     let angle = 0;
+    let flipX = false;
     switch (this.currentDirection) {
       case 'up':
-        angle = -90;
+        angle = 270;
         break;
       case 'down':
         angle = 90;
         break;
       case 'left':
-        angle = 180;
+        flipX = true;
         break;
       case 'right':
-        angle = 0;
+        flipX = false;
         break;
     }
 
-    // Set the angle
+    // Set the angle and flip
     this.player.setAngle(angle);
+    this.player.setFlipX(flipX);
+    this.player.setFlipY(false);
 
     // Scale the mouth opening based on movement
     const isMoving = this.currentDirection !== null;
-    const scaleX = isMoving ? (this.mouthOpen ? 1 : 0.7) : 0.85;
+    
+    // When moving and mouth is open, stretch in movement direction and squeeze perpendicular
+    let scaleX = 1;
+    let scaleY = 1;
+    
+    if (isMoving) {
+      if (this.mouthOpen) {
+        // When mouth is open, stretch in movement direction
+        switch (this.currentDirection) {
+          case 'left':
+          case 'right':
+            scaleX = 1.2; // Stretch horizontally
+            scaleY = 0.8; // Squeeze vertically
+            break;
+          case 'up':
+          case 'down':
+            scaleX = 0.8; // Squeeze horizontally
+            scaleY = 1.2; // Stretch vertically
+            break;
+        }
+      } else {
+        // When mouth is closed, make slightly round
+        scaleX = 0.9;
+        scaleY = 0.9;
+      }
+    } else {
+      // When not moving, maintain a slightly open mouth
+      scaleX = 0.95;
+      scaleY = 0.95;
+    }
     
     // Apply scale animation
     this.tweens.add({
       targets: this.player,
       scaleX: scaleX,
+      scaleY: scaleY,
       duration: 100,
-      ease: 'Linear',
-      onComplete: () => {
-        if (!this.player) return;
-        // Ensure Y scale stays constant
-        this.player.setScale(scaleX, 1);
-      }
+      ease: 'Linear'
     });
   }
 
