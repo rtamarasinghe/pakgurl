@@ -14,8 +14,8 @@
 - [x] Implement tile-based collision system
 - [x] Add teleport tunnels on sides
 - [ ] Add visual polish to maze walls
-- [ ] Add teleport animation effects
-- [ ] Add particle effects for teleportation
+- [x] Add teleport animation effects
+- [x] Add particle effects for teleportation
 
 ## Ghost AI System
 - [ ] Add basic ghost sprite and movement

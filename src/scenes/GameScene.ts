@@ -1,10 +1,13 @@
 import { MAZE_LAYOUT, TILE_SIZE, TileType, MAZE_WIDTH, MAZE_HEIGHT } from '../config/mazeConfig';
+import { TeleportEffects } from '../effects/TeleportEffects';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private teleportZones!: Phaser.GameObjects.Zone[];
+  private teleportEffects!: TeleportEffects;
+  private isTeleporting: boolean = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -16,6 +19,13 @@ export class GameScene extends Phaser.Scene {
     this.load.image('wall', 'assets/wall.png');
     this.load.image('dot', 'assets/dot.png');
     this.load.image('power-pellet', 'assets/power-pellet.png');
+
+    // Create a white pixel texture for particles
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xffffff);
+    graphics.fillRect(0, 0, 2, 2);
+    graphics.generateTexture('white-pixel', 2, 2);
+    graphics.destroy();
   }
 
   create(): void {
@@ -32,6 +42,9 @@ export class GameScene extends Phaser.Scene {
 
     // Create teleport zones
     this.createTeleportZones();
+
+    // Initialize teleport effects
+    this.teleportEffects = new TeleportEffects(this);
 
     // Add player at starting position (center bottom of maze)
     const playerStartX = MAZE_WIDTH / 2;
@@ -150,7 +163,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleTeleport(enteredZone: Phaser.GameObjects.Zone): void {
-    if (!this.player || !this.player.body) return;
+    if (!this.player || !this.player.body || this.isTeleporting) return;
 
     // Find the other teleport zone
     const otherZone = this.teleportZones.find(zone => zone !== enteredZone);
@@ -160,13 +173,38 @@ export class GameScene extends Phaser.Scene {
     const movingRight = this.player.body.velocity.x > 0;
     const isLeftZone = enteredZone.x < MAZE_WIDTH / 2;
 
-    console.log(`Teleport check: movingRight=${movingRight}, isLeftZone=${isLeftZone}`);
-
     if ((isLeftZone && !movingRight) || (!isLeftZone && movingRight)) {
-      console.log('Teleporting player');
-      // Teleport the player to the other zone
-      this.player.x = otherZone.x + (isLeftZone ? -TILE_SIZE : TILE_SIZE);
-      this.player.y = otherZone.y;
+      this.isTeleporting = true;
+
+      // Store current position for effects
+      const fromX = this.player.x;
+      const fromY = this.player.y;
+      const toX = otherZone.x + (isLeftZone ? -TILE_SIZE : TILE_SIZE);
+      const toY = otherZone.y;
+
+      // Make player temporarily invisible
+      this.player.setAlpha(0);
+
+      // Play teleport effects
+      this.teleportEffects.playTeleportEffect(fromX, fromY, toX, toY);
+
+      // Teleport after a short delay
+      this.time.delayedCall(200, () => {
+        // Teleport the player
+        this.player.x = toX;
+        this.player.y = toY;
+        
+        // Fade the player back in
+        this.tweens.add({
+          targets: this.player,
+          alpha: 1,
+          duration: 200,
+          ease: 'Linear',
+          onComplete: () => {
+            this.isTeleporting = false;
+          }
+        });
+      });
     }
   }
 
