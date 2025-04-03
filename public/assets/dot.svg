@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="8" height="8" viewBox="0 0 8 8" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="4" cy="4" r="3" fill="#FFFFFF"/>
+<svg width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- Subtle glow -->
+    <circle cx="8" cy="8" r="6" fill="#ffffff" opacity="0.2"/>
+    
+    <!-- Core dot -->
+    <circle cx="8" cy="8" r="3" fill="#ffffff"/>
+    
+    <!-- Inner highlight -->
+    <circle cx="7" cy="7" r="1" fill="#ffffff" opacity="0.8"/>
 </svg> 

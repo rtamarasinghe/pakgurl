@@ -1,12 +1,12 @@
 # Pac-Man Game Implementation TODO
 
 ## Dots/Pellets System
-- [ ] Create grid system for pellet placement
-- [ ] Add regular scoring pellets
-- [ ] Add power pellets
-- [ ] Implement pellet collection/collision detection
-- [ ] Create scoring system
-- [ ] Add visual feedback for pellet collection
+- [x] Create grid system for pellet placement
+- [x] Add regular scoring pellets
+- [x] Add power pellets
+- [x] Implement pellet collection/collision detection
+- [x] Create scoring system
+- [x] Add visual feedback for pellet collection
 
 ## Maze Layout
 - [x] Design maze layout using tiles

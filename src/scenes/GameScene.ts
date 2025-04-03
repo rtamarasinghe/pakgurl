@@ -1,5 +1,6 @@
 import { MAZE_LAYOUT, TILE_SIZE, TileType, MAZE_WIDTH, MAZE_HEIGHT } from '../config/mazeConfig';
 import { TeleportEffects } from '../effects/TeleportEffects';
+import { PelletSystem } from '../components/PelletSystem';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -7,10 +8,13 @@ export class GameScene extends Phaser.Scene {
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private teleportZones!: Phaser.GameObjects.Zone[];
   private teleportEffects!: TeleportEffects;
+  private pelletSystem!: PelletSystem;
   private isTeleporting: boolean = false;
   private currentDirection: 'up' | 'down' | 'left' | 'right' | null = null;
   private nextDirection: 'up' | 'down' | 'left' | 'right' | null = null;
   private debugGraphics!: Phaser.GameObjects.Graphics;
+  private mouthOpen: boolean = false;
+  private mouthAnimationTimer!: Phaser.Time.TimerEvent;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -18,10 +22,10 @@ export class GameScene extends Phaser.Scene {
 
   preload(): void {
     // Load game assets
-    this.load.image('player', 'assets/player.png');
+    this.load.svg('player', 'assets/player.svg');
     this.load.image('wall', 'assets/wall.png');
-    this.load.image('dot', 'assets/dot.png');
-    this.load.image('power-pellet', 'assets/power-pellet.png');
+    this.load.svg('dot', 'assets/dot.svg');
+    this.load.svg('power-pellet', 'assets/power-pellet.svg');
 
     // Create a white pixel texture for particles
     const graphics = this.add.graphics();
@@ -96,10 +100,18 @@ export class GameScene extends Phaser.Scene {
       this.player.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
       // Set the physics body size to match the display size
       this.player.body.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
-      console.log('Player created with physics body:', this.player.body);
 
       // Setup teleport zone overlaps
       this.setupTeleportOverlaps();
+
+      // Start mouth animation
+      this.startMouthAnimation();
+    }
+
+    // Initialize pellet system
+    this.pelletSystem = new PelletSystem(this);
+    if (this.player) {
+      this.pelletSystem.setupCollision(this.player);
     }
 
     // Setup keyboard controls
@@ -113,6 +125,9 @@ export class GameScene extends Phaser.Scene {
     if (this.player && this.walls) {
       this.physics.add.collider(this.player, this.walls);
     }
+
+    // Listen for power pellet collection
+    this.events.on('powerPelletCollected', this.handlePowerPelletCollected, this);
 
     // Debug: Log all physics bodies in the scene
     console.log('All physics bodies:', this.physics.world.bodies.entries);
@@ -261,6 +276,69 @@ export class GameScene extends Phaser.Scene {
         });
       });
     }
+  }
+
+  private handlePowerPelletCollected(): void {
+    // TODO: Implement ghost frightened mode
+    console.log('Power pellet collected!');
+  }
+
+  private startMouthAnimation(): void {
+    // Clear any existing timer
+    if (this.mouthAnimationTimer) {
+      this.mouthAnimationTimer.destroy();
+    }
+
+    // Create a timer that toggles mouth state every 150ms
+    this.mouthAnimationTimer = this.time.addEvent({
+      delay: 150,
+      callback: this.updateMouthState,
+      callbackScope: this,
+      loop: true
+    });
+  }
+
+  private updateMouthState(): void {
+    if (!this.player) return;
+
+    this.mouthOpen = !this.mouthOpen;
+    
+    // Update player rotation based on direction
+    let angle = 0;
+    switch (this.currentDirection) {
+      case 'up':
+        angle = -90;
+        break;
+      case 'down':
+        angle = 90;
+        break;
+      case 'left':
+        angle = 180;
+        break;
+      case 'right':
+        angle = 0;
+        break;
+    }
+
+    // Set the angle
+    this.player.setAngle(angle);
+
+    // Scale the mouth opening based on movement
+    const isMoving = this.currentDirection !== null;
+    const scaleX = isMoving ? (this.mouthOpen ? 1 : 0.7) : 0.85;
+    
+    // Apply scale animation
+    this.tweens.add({
+      targets: this.player,
+      scaleX: scaleX,
+      duration: 100,
+      ease: 'Linear',
+      onComplete: () => {
+        if (!this.player) return;
+        // Ensure Y scale stays constant
+        this.player.setScale(scaleX, 1);
+      }
+    });
   }
 
   update(): void {
