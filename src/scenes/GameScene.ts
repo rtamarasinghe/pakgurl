@@ -4,6 +4,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
+  private teleportZones!: Phaser.GameObjects.Zone[];
 
   constructor() {
     super({ key: 'GameScene' });
@@ -29,15 +30,24 @@ export class GameScene extends Phaser.Scene {
     // Create maze
     this.createMaze();
 
+    // Create teleport zones
+    this.createTeleportZones();
+
     // Add player at starting position (center bottom of maze)
     const playerStartX = MAZE_WIDTH / 2;
     const playerStartY = MAZE_HEIGHT - 1.5 * TILE_SIZE;
     this.player = this.physics.add.sprite(playerStartX, playerStartY, 'player');
     
-    if (this.player) {
+    if (this.player && this.player.body) {
       this.player.setCollideWorldBounds(true);
       // Make player slightly smaller than tile size
       this.player.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      // Set the physics body size to match the display size
+      this.player.body.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      console.log('Player created with physics body:', this.player.body);
+
+      // Setup teleport zone overlaps
+      this.setupTeleportOverlaps();
     }
 
     // Setup keyboard controls
@@ -51,6 +61,9 @@ export class GameScene extends Phaser.Scene {
     if (this.player && this.walls) {
       this.physics.add.collider(this.player, this.walls);
     }
+
+    // Debug: Log all physics bodies in the scene
+    console.log('All physics bodies:', this.physics.world.bodies.entries);
   }
 
   private createMaze(): void {
@@ -75,11 +88,86 @@ export class GameScene extends Phaser.Scene {
             // We'll implement power pellets later
             break;
           case TileType.TELEPORT:
-            // We'll implement teleport points later
+            // Teleport points are handled separately
             break;
         }
       });
     });
+  }
+
+  private createTeleportZones(): void {
+    this.teleportZones = [];
+    
+    // Find teleport points in the maze layout
+    MAZE_LAYOUT.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        if (tile === TileType.TELEPORT) {
+          const zone = this.add.zone(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            TILE_SIZE,
+            TILE_SIZE
+          );
+          
+          // Enable physics for the zone
+          this.physics.world.enable(zone, Phaser.Physics.Arcade.STATIC_BODY);
+          const zoneBody = (zone.body as Phaser.Physics.Arcade.StaticBody);
+          zoneBody.immovable = true;
+
+          // Debug visualization
+          const graphics = this.add.graphics();
+          graphics.lineStyle(2, 0x00ff00);
+          graphics.strokeRect(zone.x - TILE_SIZE/2, zone.y - TILE_SIZE/2, TILE_SIZE, TILE_SIZE);
+
+          this.teleportZones.push(zone);
+          
+          console.log(`Created teleport zone at (${x}, ${y}), pixel pos: (${zone.x}, ${zone.y})`);
+        }
+      });
+    });
+  }
+
+  private setupTeleportOverlaps(): void {
+    if (!this.player) return;
+
+    this.teleportZones.forEach((zone, index) => {
+      // Create a debug circle to show the overlap area
+      const graphics = this.add.graphics();
+      graphics.lineStyle(2, 0xff0000);
+      graphics.strokeCircle(zone.x, zone.y, TILE_SIZE / 2);
+
+      this.physics.add.overlap(
+        this.player,
+        zone,
+        () => {
+          console.log(`Player overlapped with teleport zone ${index}`);
+          this.handleTeleport(zone);
+        },
+        undefined,
+        this
+      );
+    });
+  }
+
+  private handleTeleport(enteredZone: Phaser.GameObjects.Zone): void {
+    if (!this.player || !this.player.body) return;
+
+    // Find the other teleport zone
+    const otherZone = this.teleportZones.find(zone => zone !== enteredZone);
+    if (!otherZone) return;
+
+    // Only teleport if player is moving in the correct direction
+    const movingRight = this.player.body.velocity.x > 0;
+    const isLeftZone = enteredZone.x < MAZE_WIDTH / 2;
+
+    console.log(`Teleport check: movingRight=${movingRight}, isLeftZone=${isLeftZone}`);
+
+    if ((isLeftZone && !movingRight) || (!isLeftZone && movingRight)) {
+      console.log('Teleporting player');
+      // Teleport the player to the other zone
+      this.player.x = otherZone.x + (isLeftZone ? -TILE_SIZE : TILE_SIZE);
+      this.player.y = otherZone.y;
+    }
   }
 
   update(): void {
