@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ghost body -->
+    <path d="M16,2 
+             C9.373,2 4,7.373 4,14 
+             L4,26 
+             C4,26 6,24 8,26 
+             C10,28 12,26 14,28 
+             C16,30 18,28 20,30 
+             C22,32 24,30 26,32 
+             C28,30 28,26 28,26 
+             L28,14 
+             C28,7.373 22.627,2 16,2 Z" 
+          fill="#0000ff"/>
+    
+    <!-- Scared eyes -->
+    <path d="M10,12 L12,14 M10,14 L12,12" stroke="#ffffff" stroke-width="2"/>
+    <path d="M20,12 L22,14 M20,14 L22,12" stroke="#ffffff" stroke-width="2"/>
+    
+    <!-- Scared mouth -->
+    <path d="M13,18 Q16,15 19,18" stroke="#ffffff" stroke-width="2" fill="none"/>
+</svg> 

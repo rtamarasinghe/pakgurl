@@ -1,6 +1,7 @@
 import { MAZE_LAYOUT, TILE_SIZE, TileType, MAZE_WIDTH, MAZE_HEIGHT } from '../config/mazeConfig';
 import { TeleportEffects } from '../effects/TeleportEffects';
 import { PelletSystem } from '../components/PelletSystem';
+import { GhostManager } from '../components/ghosts/GhostManager';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -15,6 +16,7 @@ export class GameScene extends Phaser.Scene {
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private mouthOpen: boolean = false;
   private mouthAnimationTimer!: Phaser.Time.TimerEvent;
+  private ghostManager!: GhostManager;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -26,6 +28,11 @@ export class GameScene extends Phaser.Scene {
     this.load.image('wall', 'assets/wall.png');
     this.load.svg('dot', 'assets/dot.svg');
     this.load.svg('power-pellet', 'assets/power-pellet.svg');
+    
+    // Load ghost assets
+    this.load.svg('ghost-base', 'assets/ghost-base.svg');
+    this.load.svg('ghost-frightened', 'assets/ghost-frightened.svg');
+    this.load.svg('ghost-eaten', 'assets/ghost-eaten.svg');
 
     // Create a white pixel texture for particles
     const graphics = this.add.graphics();
@@ -114,6 +121,12 @@ export class GameScene extends Phaser.Scene {
       this.pelletSystem.setupCollision(this.player);
     }
 
+    // Initialize ghost manager after player is created
+    this.ghostManager = new GhostManager(this);
+    if (this.player) {
+      this.ghostManager.setupCollision(this.player);
+    }
+
     // Setup keyboard controls
     if (!this.input || !this.input.keyboard) {
       console.error('Input system not available');
@@ -128,6 +141,9 @@ export class GameScene extends Phaser.Scene {
 
     // Listen for power pellet collection
     this.events.on('powerPelletCollected', this.handlePowerPelletCollected, this);
+
+    // Listen for player death
+    this.events.on('playerDied', this.handlePlayerDeath, this);
 
     // Debug: Log all physics bodies in the scene
     console.log('All physics bodies:', this.physics.world.bodies.entries);
@@ -279,8 +295,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePowerPelletCollected(): void {
-    // TODO: Implement ghost frightened mode
-    console.log('Power pellet collected!');
+    this.ghostManager.handlePowerPelletCollected();
+  }
+
+  private handlePlayerDeath(): void {
+    // TODO: Implement death animation and life system
+    console.log('Player died!');
+    this.resetLevel();
+  }
+
+  private resetLevel(): void {
+    if (this.player) {
+      const playerStartX = MAZE_WIDTH / 2;
+      const playerStartY = MAZE_HEIGHT - 1.5 * TILE_SIZE;
+      this.player.setPosition(playerStartX, playerStartY);
+      this.currentDirection = null;
+      this.nextDirection = null;
+    }
+    this.ghostManager.resetGhosts();
   }
 
   private startMouthAnimation(): void {
@@ -523,6 +555,11 @@ export class GameScene extends Phaser.Scene {
           this.player.setVelocityY(speed);
           break;
       }
+    }
+
+    // Update ghosts
+    if (this.player) {
+      this.ghostManager.update(this.player);
     }
   }
 

@@ -18,28 +18,28 @@
 - [x] Add particle effects for teleportation
 
 ## Ghost AI System
-- [ ] Add basic ghost sprite and movement
-- [ ] Implement Blinky (Red) - Direct chase behavior
-- [ ] Implement Pinky (Pink) - Intercept behavior
-- [ ] Implement Inky (Blue) - Ambush behavior
-- [ ] Implement Clyde (Orange) - Random/scatter behavior
-- [ ] Add ghost state management
-  - [ ] Normal chase mode
-  - [ ] Scatter mode
-  - [ ] Frightened mode
-- [ ] Implement ghost respawn system
-- [ ] Add ghost animations
-- [ ] Add ghost house behavior
+- [x] Add basic ghost sprite and movement
+- [x] Implement Blinky (Red) - Direct chase behavior
+- [x] Implement Pinky (Pink) - Intercept behavior
+- [x] Implement Inky (Blue) - Ambush behavior
+- [x] Implement Clyde (Orange) - Random/scatter behavior
+- [x] Add ghost state management
+  - [x] Normal chase mode
+  - [x] Scatter mode
+  - [x] Frightened mode
+- [x] Implement ghost respawn system
+- [x] Add ghost animations
+- [x] Add ghost house behavior
 
 ## Player Mechanics
-- [ ] Add Pac-Man animations
-  - [ ] Mouth opening/closing
-  - [ ] Direction-based rotation
+- [x] Add Pac-Man animations
+  - [x] Mouth opening/closing
+  - [x] Direction-based rotation
   - [ ] Death animation
 - [ ] Implement lives system
-- [ ] Add player-ghost collision handling
-- [ ] Improve movement to be grid-aligned
-- [ ] Add power pellet effects on player
+- [x] Add player-ghost collision handling
+- [x] Improve movement to be grid-aligned
+- [x] Add power pellet effects on player
 
 ## Game States
 - [ ] Create start screen
@@ -48,7 +48,7 @@
 - [ ] Create high score system
 - [ ] Add pause functionality
 - [ ] Add sound effects and music
-- [ ] Implement score display
+- [x] Implement score display
 - [ ] Add level display
 - [ ] Create lives display
 
