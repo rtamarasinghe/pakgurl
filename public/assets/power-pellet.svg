@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="32" height="32" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg">
     <!-- Outer glow -->
-    <circle cx="16" cy="16" r="14" fill="#ffffff" opacity="0.2"/>
+    <circle cx="16" cy="16" r="14" fill="#ffffff" opacity="0.2" stroke="none"/>
     
     <!-- Middle glow -->
-    <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.4"/>
+    <circle cx="16" cy="16" r="10" fill="#ffffff" opacity="0.4" stroke="none"/>
     
     <!-- Core pellet -->
-    <circle cx="16" cy="16" r="6" fill="#ffffff"/>
+    <circle cx="16" cy="16" r="6" fill="#ffffff" stroke="none"/>
     
     <!-- Inner highlight -->
-    <circle cx="14" cy="14" r="2" fill="#ffffff" opacity="0.8"/>
+    <circle cx="14" cy="14" r="2" fill="#ffffff" opacity="0.8" stroke="none"/>
 </svg> 

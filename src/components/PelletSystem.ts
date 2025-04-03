@@ -37,6 +37,14 @@ export class PelletSystem {
                 if (tile === TileType.PATH) {
                     const pellet = this.pellets.create(pixelX, pixelY, 'dot');
                     pellet.setDisplaySize(TILE_SIZE * 0.2, TILE_SIZE * 0.2);
+                    
+                    // Set the physics body size to match the visible dot
+                    const body = pellet.body as Phaser.Physics.Arcade.StaticBody;
+                    if (body) {
+                        body.setSize(TILE_SIZE * 0.2, TILE_SIZE * 0.2);
+                        body.updateFromGameObject();
+                    }
+                    
                     this.addPelletGlow(pellet);
                 }
                 // Add power pellets
@@ -65,6 +73,13 @@ export class PelletSystem {
         // Create the main power pellet sprite
         const powerPellet = this.powerPellets.create(0, 0, 'power-pellet');
         powerPellet.setDisplaySize(TILE_SIZE * 0.6, TILE_SIZE * 0.6);
+        
+        // Set the physics body size to match the visible power pellet
+        const body = powerPellet.body as Phaser.Physics.Arcade.StaticBody;
+        if (body) {
+            body.setSize(TILE_SIZE * 0.6, TILE_SIZE * 0.6);
+            body.updateFromGameObject();
+        }
 
         // Add everything to the container
         container.add([outerGlow, middleGlow, powerPellet]);
