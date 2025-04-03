@@ -26,6 +26,42 @@ export class GameScene extends Phaser.Scene {
     graphics.fillRect(0, 0, 2, 2);
     graphics.generateTexture('white-pixel', 2, 2);
     graphics.destroy();
+
+    // Create wall texture
+    this.createWallTexture();
+  }
+
+  private createWallTexture(): void {
+    const wallSize = TILE_SIZE;
+    const graphics = this.add.graphics();
+
+    // Draw the main wall shape
+    graphics.clear();
+
+    // Fill with dark blue base color
+    graphics.fillStyle(0x0000aa);
+    graphics.fillRect(0, 0, wallSize, wallSize);
+
+    // Add inner glow effect
+    graphics.lineStyle(2, 0x0066ff);
+    graphics.strokeRect(2, 2, wallSize - 4, wallSize - 4);
+
+    // Add outer edge
+    graphics.lineStyle(1, 0x000066);
+    graphics.strokeRect(0, 0, wallSize, wallSize);
+
+    // Add some subtle inner detail
+    graphics.lineStyle(1, 0x0044cc);
+    graphics.beginPath();
+    graphics.moveTo(4, 4);
+    graphics.lineTo(wallSize - 4, 4);
+    graphics.moveTo(4, wallSize - 4);
+    graphics.lineTo(wallSize - 4, wallSize - 4);
+    graphics.stroke();
+
+    // Generate the texture
+    graphics.generateTexture('wall-enhanced', wallSize, wallSize);
+    graphics.destroy();
   }
 
   create(): void {
@@ -91,8 +127,24 @@ export class GameScene extends Phaser.Scene {
 
         switch (tile) {
           case TileType.WALL:
-            const wall = this.walls.create(pixelX, pixelY, 'wall');
+            const wall = this.walls.create(pixelX, pixelY, 'wall-enhanced');
             wall.setDisplaySize(TILE_SIZE, TILE_SIZE);
+            
+            // Add a subtle glow effect
+            const glow = this.add.sprite(pixelX, pixelY, 'wall-enhanced');
+            glow.setDisplaySize(TILE_SIZE + 4, TILE_SIZE + 4);
+            glow.setTint(0x0066ff);
+            glow.setAlpha(0.2);
+            
+            // Add a subtle pulsing animation
+            this.tweens.add({
+                targets: glow,
+                alpha: 0.1,
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
             break;
           case TileType.GHOST_HOUSE:
             // We'll implement ghost house later
