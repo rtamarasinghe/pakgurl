@@ -30,7 +30,10 @@ export class GameScene extends Phaser.Scene {
     this.load.svg('power-pellet', 'assets/power-pellet.svg');
     
     // Load ghost assets
-    this.load.svg('ghost-base', 'assets/ghost-base.svg');
+    this.load.svg('ghost-blinky', 'assets/ghost-base.svg');
+    this.load.svg('ghost-pinky', 'assets/ghost-base.svg');
+    this.load.svg('ghost-inky', 'assets/ghost-base.svg');
+    this.load.svg('ghost-clyde', 'assets/ghost-base.svg');
     this.load.svg('ghost-frightened', 'assets/ghost-frightened.svg');
     this.load.svg('ghost-eaten', 'assets/ghost-eaten.svg');
 

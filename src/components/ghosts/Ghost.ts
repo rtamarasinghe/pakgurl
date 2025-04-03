@@ -33,6 +33,7 @@ export abstract class Ghost {
         // Create the ghost sprite
         this.sprite = scene.physics.add.sprite(x, y, texture);
         this.sprite.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+        this.sprite.setTint(this.getGhostColor());
         
         // Set up physics
         if (this.sprite.body) {
