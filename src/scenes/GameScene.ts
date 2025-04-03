@@ -8,6 +8,9 @@ export class GameScene extends Phaser.Scene {
   private teleportZones!: Phaser.GameObjects.Zone[];
   private teleportEffects!: TeleportEffects;
   private isTeleporting: boolean = false;
+  private currentDirection: 'up' | 'down' | 'left' | 'right' | null = null;
+  private nextDirection: 'up' | 'down' | 'left' | 'right' | null = null;
+  private debugGraphics!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -261,25 +264,148 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (!this.player || !this.cursors) return;
+    if (!this.player || !this.cursors || !this.player.body) return;
 
     // Handle player movement
     const speed = 160;
 
+    // Get the current tile position
+    const currentTileX = Math.floor(this.player.x / TILE_SIZE);
+    const currentTileY = Math.floor(this.player.y / TILE_SIZE);
+    
+    // Calculate position within current tile (centered at 0.5)
+    const tilePositionX = (this.player.x - (currentTileX * TILE_SIZE)) / TILE_SIZE;
+    const tilePositionY = (this.player.y - (currentTileY * TILE_SIZE)) / TILE_SIZE;
+    
+    // Check if we're centered enough on the grid to turn (increased tolerance slightly)
+    const canTurn = (
+      Math.abs(tilePositionX - 0.5) < 0.15 && 
+      Math.abs(tilePositionY - 0.5) < 0.15
+    );
+
+    // Debug visualization of player position relative to grid
+    this.debugGridAlignment(currentTileX, currentTileY, tilePositionX, tilePositionY, canTurn);
+
+    // Check if the current direction is blocked by a wall
+    let isCurrentDirectionBlocked = false;
+    if (this.currentDirection) {
+      const nextTileX = currentTileX + (this.currentDirection === 'right' ? 1 : this.currentDirection === 'left' ? -1 : 0);
+      const nextTileY = currentTileY + (this.currentDirection === 'down' ? 1 : this.currentDirection === 'up' ? -1 : 0);
+      
+      isCurrentDirectionBlocked = 
+        nextTileX < 0 || 
+        nextTileX >= MAZE_LAYOUT[0].length ||
+        nextTileY < 0 || 
+        nextTileY >= MAZE_LAYOUT.length ||
+        MAZE_LAYOUT[nextTileY][nextTileX] === TileType.WALL;
+    }
+
+    // Store the next direction based on input
+    if (this.cursors.left.isDown) {
+      this.nextDirection = 'left';
+      if (!this.currentDirection || isCurrentDirectionBlocked) {
+        const canMoveLeft = currentTileX > 0 && MAZE_LAYOUT[currentTileY][currentTileX - 1] !== TileType.WALL;
+        if (canMoveLeft) this.currentDirection = 'left';
+      }
+    } else if (this.cursors.right.isDown) {
+      this.nextDirection = 'right';
+      if (!this.currentDirection || isCurrentDirectionBlocked) {
+        const canMoveRight = currentTileX < MAZE_LAYOUT[0].length - 1 && MAZE_LAYOUT[currentTileY][currentTileX + 1] !== TileType.WALL;
+        if (canMoveRight) this.currentDirection = 'right';
+      }
+    } else if (this.cursors.up.isDown) {
+      this.nextDirection = 'up';
+      if (!this.currentDirection || isCurrentDirectionBlocked) {
+        const canMoveUp = currentTileY > 0 && MAZE_LAYOUT[currentTileY - 1][currentTileX] !== TileType.WALL;
+        if (canMoveUp) this.currentDirection = 'up';
+      }
+    } else if (this.cursors.down.isDown) {
+      this.nextDirection = 'down';
+      if (!this.currentDirection || isCurrentDirectionBlocked) {
+        const canMoveDown = currentTileY < MAZE_LAYOUT.length - 1 && MAZE_LAYOUT[currentTileY + 1][currentTileX] !== TileType.WALL;
+        if (canMoveDown) this.currentDirection = 'down';
+      }
+    }
+
+    // If we can turn and have a next direction, try to turn
+    if (canTurn && this.nextDirection && this.nextDirection !== this.currentDirection) {
+      // Check if we can move in the next direction
+      const nextTileX = currentTileX + (this.nextDirection === 'right' ? 1 : this.nextDirection === 'left' ? -1 : 0);
+      const nextTileY = currentTileY + (this.nextDirection === 'down' ? 1 : this.nextDirection === 'up' ? -1 : 0);
+      
+      // Check if the next tile is a valid path
+      if (nextTileX >= 0 && nextTileX < MAZE_LAYOUT[0].length &&
+          nextTileY >= 0 && nextTileY < MAZE_LAYOUT.length &&
+          MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL) {
+        this.currentDirection = this.nextDirection;
+      }
+    }
+
+    // Always try to center the player on the path while moving
+    if (this.currentDirection === 'left' || this.currentDirection === 'right') {
+      // When moving horizontally, maintain vertical center
+      const targetY = currentTileY * TILE_SIZE + TILE_SIZE / 2;
+      if (Math.abs(this.player.y - targetY) > 1) {
+        this.player.y = Phaser.Math.Linear(this.player.y, targetY, 0.2);
+      }
+    } else if (this.currentDirection === 'up' || this.currentDirection === 'down') {
+      // When moving vertically, maintain horizontal center
+      const targetX = currentTileX * TILE_SIZE + TILE_SIZE / 2;
+      if (Math.abs(this.player.x - targetX) > 1) {
+        this.player.x = Phaser.Math.Linear(this.player.x, targetX, 0.2);
+      }
+    }
+
     // Reset velocity
     this.player.setVelocity(0);
 
-    // Handle player movement
-    if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-speed);
-    } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(speed);
+    // Move in the current direction
+    switch (this.currentDirection) {
+      case 'left':
+        this.player.setVelocityX(-speed);
+        break;
+      case 'right':
+        this.player.setVelocityX(speed);
+        break;
+      case 'up':
+        this.player.setVelocityY(-speed);
+        break;
+      case 'down':
+        this.player.setVelocityY(speed);
+        break;
     }
 
-    if (this.cursors.up.isDown) {
-      this.player.setVelocityY(-speed);
-    } else if (this.cursors.down.isDown) {
-      this.player.setVelocityY(speed);
+    // Only reset direction if we're blocked and not trying to move in a new direction
+    if (isCurrentDirectionBlocked && !this.nextDirection) {
+      this.currentDirection = null;
     }
+  }
+
+  private debugGridAlignment(currentTileX: number, currentTileY: number, tilePositionX: number, tilePositionY: number, canTurn: boolean): void {
+    // Clear previous debug graphics
+    if (this.debugGraphics) {
+      this.debugGraphics.clear();
+    } else {
+      this.debugGraphics = this.add.graphics();
+    }
+
+    // Draw current tile
+    this.debugGraphics.lineStyle(1, canTurn ? 0x00ff00 : 0xff0000);
+    this.debugGraphics.strokeRect(
+      currentTileX * TILE_SIZE,
+      currentTileY * TILE_SIZE,
+      TILE_SIZE,
+      TILE_SIZE
+    );
+
+    // Draw center point
+    this.debugGraphics.lineStyle(2, 0xffff00);
+    const centerX = currentTileX * TILE_SIZE + TILE_SIZE / 2;
+    const centerY = currentTileY * TILE_SIZE + TILE_SIZE / 2;
+    this.debugGraphics.lineBetween(centerX - 3, centerY, centerX + 3, centerY);
+    this.debugGraphics.lineBetween(centerX, centerY - 3, centerX, centerY + 3);
+
+    // Log position info
+    console.log(`Position in tile: (${tilePositionX.toFixed(3)}, ${tilePositionY.toFixed(3)}), canTurn: ${canTurn}`);
   }
 } 
