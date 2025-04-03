@@ -32,15 +32,16 @@ export class TeleportEffects {
         const teleportOut = this.scene.add.particles(0, 0, 'white-pixel', {
             speed: { min: 200, max: 300 },
             angle: { min: 0, max: 360 },
-            scale: { start: 0, end: 1 },
-            lifespan: 600,
+            scale: { start: 0.8, end: 0.1 }, // Start larger and shrink
+            lifespan: 800, // Longer lifespan for better visibility
             gravityY: 0,
-            quantity: 5,
+            quantity: 8, // More particles
             frequency: 10,
-            tint: [0x00ffff, 0x0099ff], // Mix of cyan and light blue
+            tint: [0x00ffff, 0x0099ff, 0xffffff], // Added white for extra brightness
             alpha: { start: 1, end: 0 },
             blendMode: 'ADD',
-            emitting: false
+            emitting: false,
+            rotate: { min: -180, max: 180 } // Add rotation for more dynamic effect
         });
 
         this.emitters.set('teleportOut', teleportOut);
@@ -51,7 +52,7 @@ export class TeleportEffects {
         const teleportOut = this.emitters.get('teleportOut');
         if (teleportOut) {
             teleportOut.setPosition(fromX, fromY);
-            teleportOut.explode(30); // Increased particle count
+            teleportOut.explode(40); // More particles for disappearing
         }
 
         // Play appear effect at end position
