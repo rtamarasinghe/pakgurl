@@ -28,37 +28,49 @@ export class GhostManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        this.initializeGhosts();
-        this.startModeTimer();
-        this.scheduleGhostReleases();
-    }
+        this.ghosts = [];
 
-    private initializeGhosts(): void {
-        // Create ghosts at their starting positions (centered in tiles)
+        // Create ghosts with correct starting positions
+        // Ghost house is centered around tile (14, 12)
+        const ghostHouseCenterX = (14 * TILE_SIZE);  // Removed the + TILE_SIZE / 2 to shift half tile left
+        const ghostHouseY = 12 * TILE_SIZE + TILE_SIZE / 2;
+
+        // Create Blinky first since Inky needs a reference to him
         const blinky = new Blinky(
-            this.scene, 
-            14 * TILE_SIZE + TILE_SIZE / 2, 
-            14 * TILE_SIZE + TILE_SIZE / 2  // Move Blinky down to proper ghost house position
+            scene,
+            ghostHouseCenterX,  // x position (center)
+            ghostHouseY  // y position (center of ghost house)
         );
+
+        // Pinky starts in ghost house
         const pinky = new Pinky(
-            this.scene, 
-            14 * TILE_SIZE + TILE_SIZE / 2, 
-            13 * TILE_SIZE + TILE_SIZE / 2  // Move Pinky up one tile
+            scene,
+            ghostHouseCenterX - TILE_SIZE,  // x position (one tile left)
+            ghostHouseY + TILE_SIZE  // y position (one tile down from center)
         );
+
+        // Inky starts in ghost house
         const inky = new Inky(
-            this.scene, 
-            12 * TILE_SIZE + TILE_SIZE / 2, 
-            13 * TILE_SIZE + TILE_SIZE / 2,  // Move Inky up one tile
-            blinky
+            scene,
+            ghostHouseCenterX,  // x position (center)
+            ghostHouseY + TILE_SIZE,  // y position (one tile down from center)
+            blinky  // Inky needs reference to Blinky for targeting
         );
+
+        // Clyde starts in ghost house
         const clyde = new Clyde(
-            this.scene, 
-            16 * TILE_SIZE + TILE_SIZE / 2, 
-            13 * TILE_SIZE + TILE_SIZE / 2  // Move Clyde up one tile
+            scene,
+            ghostHouseCenterX + TILE_SIZE,  // x position (one tile right)
+            ghostHouseY + TILE_SIZE  // y position (one tile down from center)
         );
 
         this.ghosts = [blinky, pinky, inky, clyde];
-        this.setAllGhostsState(GhostState.SCATTER);
+
+        // Start mode timer
+        this.startModeTimer();
+        
+        // Schedule initial ghost releases
+        this.scheduleGhostReleases();
     }
 
     private setAllGhostsState(state: GhostState): void {
@@ -95,10 +107,22 @@ export class GhostManager {
                 (sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
             }
         });
+
+        // Stop all timers
+        this.ghostReleaseTimers.forEach(timer => timer.destroy());
+        this.ghostReleaseTimers = [];
+        
+        if (this.modeTimer) {
+            this.modeTimer.destroy();
+            this.modeTimer = null;
+        }
     }
 
     public resumeGhosts(): void {
         this.isGhostsPaused = false;
+        // Restart mode timer and ghost releases
+        this.startModeTimer();
+        this.scheduleGhostReleases();
     }
 
     public update(player: Phaser.Physics.Arcade.Sprite | null): void {
@@ -171,20 +195,25 @@ export class GhostManager {
         // Stop any existing timers
         this.ghostReleaseTimers.forEach(timer => timer.destroy());
         this.ghostReleaseTimers = [];
+        
+        if (this.modeTimer) {
+            this.modeTimer.destroy();
+            this.modeTimer = null;
+        }
 
         // Reset all ghosts to ghost house
         this.ghosts.forEach(ghost => {
             ghost.returnToGhostHouse();
         });
 
-        // Resume ghost movement
+        // Reset state
         this.isGhostsPaused = false;
-
-        // Reset mode to initial scatter mode
         this.currentPatternIndex = 0;
+
+        // Start fresh mode timer
         this.startModeTimer();
 
-        // Schedule new ghost releases with a delay to ensure proper positioning
+        // Schedule new ghost releases with a delay
         this.scene.time.delayedCall(1000, () => {
             this.scheduleGhostReleases();
         });

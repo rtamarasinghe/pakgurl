@@ -15,7 +15,7 @@ export class GameScene extends Phaser.Scene {
   private nextDirection: 'up' | 'down' | 'left' | 'right' | null = null;
   private debugGraphics!: Phaser.GameObjects.Graphics;
   private mouthOpen: boolean = false;
-  private mouthAnimationTimer!: Phaser.Time.TimerEvent;
+  private mouthAnimationTimer: Phaser.Time.TimerEvent | null = null;
   private ghostManager!: GhostManager;
   private lives: number = 3;
   private livesDisplay!: Phaser.GameObjects.Group;
@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   private deathRotation: number = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private score: number = 0;
+  private isGameOver: boolean = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -206,6 +207,10 @@ export class GameScene extends Phaser.Scene {
 
     // Create lives display
     this.createLivesDisplay();
+
+    // Create score display
+    this.createScoreDisplay();
+    this.updateScore(0);
   }
 
   private createMaze(): void {
@@ -400,12 +405,104 @@ export class GameScene extends Phaser.Scene {
             this.resetLevel();
           } else {
             // Game over
-            this.events.emit('gameOver');
+            this.handleGameOver();
           }
         }
       },
       repeat: 12
     });
+  }
+
+  private handleGameOver(): void {
+    this.isGameOver = true;
+    
+    // Disable player movement and physics
+    if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).enable = false;
+    }
+    
+    // Stop all game timers
+    if (this.mouthAnimationTimer) {
+        this.mouthAnimationTimer.destroy();
+        this.mouthAnimationTimer = null;
+    }
+
+    // Stop ghost movement
+    this.ghostManager.pauseGhosts();
+
+    // Hide the player sprite
+    if (this.player) {
+        this.player.setVisible(false);
+    }
+
+    // Display game over text
+    const gameOverText = this.add.text(
+        MAZE_WIDTH / 2,
+        MAZE_HEIGHT / 2,
+        'GAME OVER',
+        {
+            fontSize: '48px',
+            color: '#ff0000',
+            fontFamily: 'Arial',
+            fontStyle: 'bold'
+        }
+    ).setOrigin(0.5);
+
+    // Add press space to restart text
+    const restartText = this.add.text(
+        MAZE_WIDTH / 2,
+        MAZE_HEIGHT / 2 + 60,
+        'Press SPACE to restart',
+        {
+            fontSize: '24px',
+            color: '#ffffff',
+            fontFamily: 'Arial'
+        }
+    ).setOrigin(0.5);
+
+    // Listen for space key to restart
+    if (this.input && this.input.keyboard) {
+        this.input.keyboard.once('keydown-SPACE', () => {
+            // Clean up current scene
+            this.cleanupScene();
+            // Restart the scene
+            this.scene.restart();
+        });
+    } else {
+        console.error('Keyboard input not available');
+    }
+  }
+
+  private cleanupScene(): void {
+    // Stop all timers
+    if (this.mouthAnimationTimer) {
+        this.mouthAnimationTimer.destroy();
+        this.mouthAnimationTimer = null;
+    }
+    if (this.deathAnimationTimer) {
+        this.deathAnimationTimer.destroy();
+        this.deathAnimationTimer = null;
+    }
+
+    // Reset all game state
+    this.isGameOver = false;
+    this.isPlayerDying = false;
+    this.lives = 3;
+    this.score = 0;
+    this.currentDirection = null;
+    this.nextDirection = null;
+    this.deathRotation = 0;
+    this.mouthOpen = false;
+    this.isTeleporting = false;
+
+    // Clean up physics
+    if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).enable = false;
+        (this.player.body as Phaser.Physics.Arcade.Body).velocity.set(0, 0);
+    }
+
+    // Stop all ghost movement and reset their state
+    this.ghostManager.pauseGhosts();
   }
 
   private updateLivesDisplay(): void {
@@ -536,6 +633,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (this.isGameOver || this.isPlayerDying) return;
+
     if (!this.player || !this.cursors || !this.player.body) return;
 
     // Handle player movement
