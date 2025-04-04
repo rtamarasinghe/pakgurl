@@ -149,10 +149,7 @@ export abstract class Ghost {
                 this.updateGhostHouseBehavior();
             } else {
                 // If not in ghost house and no player, just continue in current direction
-                this.sprite.setVelocity(
-                    this.currentDirection.x * this.speed,
-                    this.currentDirection.y * this.speed
-                );
+                this.moveInDirection(this.currentDirection);
             }
             return;
         }
@@ -165,32 +162,64 @@ export abstract class Ghost {
         // Get the target based on current state and behavior
         const target = this.getTarget(player);
         if (!target) {
-            // If no target, continue in current direction
-            this.sprite.setVelocity(
-                this.currentDirection.x * this.speed,
-                this.currentDirection.y * this.speed
-            );
+            this.moveInDirection(this.currentDirection);
             return;
         }
         
         // Get valid directions at current position
         const validDirections = this.getValidDirections();
         if (!validDirections.length) {
-            // If no valid directions, stop moving
             this.sprite.setVelocity(0, 0);
             return;
         }
         
         // Choose the best direction
         const newDirection = this.chooseBestDirection(validDirections, target);
-        
-        // Apply the movement
-        this.sprite.setVelocity(
-            newDirection.x * this.speed,
-            newDirection.y * this.speed
+        this.moveInDirection(newDirection);
+        this.currentDirection = newDirection;
+    }
+
+    private moveInDirection(direction: Phaser.Math.Vector2): void {
+        // Calculate the next position
+        const nextX = Math.floor(this.sprite.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+        const nextY = Math.floor(this.sprite.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+
+        // If we're not centered in a tile, move towards the center first
+        const distanceToCenter = Phaser.Math.Distance.Between(
+            this.sprite.x, this.sprite.y,
+            nextX, nextY
         );
 
-        this.currentDirection = newDirection;
+        if (distanceToCenter > 1) {
+            // Move towards tile center
+            const angle = Phaser.Math.Angle.Between(
+                this.sprite.x, this.sprite.y,
+                nextX, nextY
+            );
+            this.sprite.setVelocity(
+                Math.cos(angle) * this.speed,
+                Math.sin(angle) * this.speed
+            );
+        } else {
+            // We're centered, check if the next tile in our direction is valid
+            const nextTileX = Math.floor((nextX + direction.x * TILE_SIZE) / TILE_SIZE);
+            const nextTileY = Math.floor((nextY + direction.y * TILE_SIZE) / TILE_SIZE);
+
+            // If next tile is valid, move in the desired direction
+            if (nextTileX >= 0 && nextTileX < MAZE_LAYOUT[0].length &&
+                nextTileY >= 0 && nextTileY < MAZE_LAYOUT.length &&
+                MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL) {
+                
+                this.sprite.setPosition(nextX, nextY);
+                this.sprite.setVelocity(
+                    direction.x * this.speed,
+                    direction.y * this.speed
+                );
+            } else {
+                // If next tile is not valid, stop and get new directions
+                this.sprite.setVelocity(0, 0);
+            }
+        }
     }
 
     protected abstract getTarget(player: Phaser.Physics.Arcade.Sprite): Phaser.Math.Vector2;
@@ -220,12 +249,17 @@ export abstract class Ghost {
             const nextTileX = currentTileX + dir.x;
             const nextTileY = currentTileY + dir.y;
 
-            // Check if next tile is within bounds and not a wall
-            return nextTileX >= 0 && 
-                   nextTileX < MAZE_LAYOUT[0].length &&
-                   nextTileY >= 0 && 
-                   nextTileY < MAZE_LAYOUT.length &&
-                   MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL;
+            // Check if next tile is within bounds
+            if (nextTileX < 0 || nextTileX >= MAZE_LAYOUT[0].length ||
+                nextTileY < 0 || nextTileY >= MAZE_LAYOUT.length) {
+                return false;
+            }
+
+            // Get the tile type at the next position
+            const nextTile = MAZE_LAYOUT[nextTileY][nextTileX];
+
+            // Allow movement through paths, ghost house, and power pellet locations
+            return nextTile !== TileType.WALL;
         });
     }
 
@@ -268,26 +302,35 @@ export abstract class Ghost {
 
     protected updateGhostHouseBehavior(): void {
         // Implement ghost house behavior (bouncing up and down)
-        const amplitude = TILE_SIZE * 0.5;
+        const amplitude = TILE_SIZE * 0.3; // Reduced amplitude to prevent wall overlap
         const frequency = 2000; // 2 seconds per cycle
         
+        // Keep X position centered
+        const centeredX = Math.floor(this.startPosition.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
         const y = this.startPosition.y + Math.sin(this.scene.time.now / frequency) * amplitude;
-        this.sprite.setY(y);
+        this.sprite.setPosition(centeredX, y);
         this.sprite.setVelocityX(0);
     }
 
     public exitGhostHouse(): void {
         this.ghostHouse = false;
-        // Move slightly upward to clear the ghost house
-        this.sprite.setPosition(this.startPosition.x, this.startPosition.y - TILE_SIZE);
+        // Move to the ghost house exit position (just above the ghost house)
+        const exitX = 14 * TILE_SIZE + TILE_SIZE / 2;  // Center of ghost house horizontally
+        const exitY = 11 * TILE_SIZE + TILE_SIZE / 2;  // Just above ghost house
+        this.sprite.setPosition(exitX, exitY);
         // Start with upward movement
         this.currentDirection = new Phaser.Math.Vector2(0, -1);
         this.setState(GhostState.SCATTER);
+        // Apply initial movement
+        this.sprite.setVelocity(0, -this.speed);
     }
 
     public returnToGhostHouse(): void {
         this.ghostHouse = true;
-        this.sprite.setPosition(this.startPosition.x, this.startPosition.y);
+        // Ensure centered position when returning
+        const newX = Math.floor(this.startPosition.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+        const newY = Math.floor(this.startPosition.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+        this.sprite.setPosition(newX, newY);
         this.setState(GhostState.CHASE);
     }
 

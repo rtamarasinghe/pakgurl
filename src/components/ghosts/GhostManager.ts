@@ -33,15 +33,30 @@ export class GhostManager {
     }
 
     private initializeGhosts(): void {
-        // Create ghosts at their starting positions
-        const blinky = new Blinky(this.scene, 14 * TILE_SIZE, 11 * TILE_SIZE);
-        const pinky = new Pinky(this.scene, 14 * TILE_SIZE, 14 * TILE_SIZE);
-        const inky = new Inky(this.scene, 12 * TILE_SIZE, 14 * TILE_SIZE, blinky);
-        const clyde = new Clyde(this.scene, 16 * TILE_SIZE, 14 * TILE_SIZE);
+        // Create ghosts at their starting positions (centered in tiles)
+        const blinky = new Blinky(
+            this.scene, 
+            14 * TILE_SIZE + TILE_SIZE / 2, 
+            14 * TILE_SIZE + TILE_SIZE / 2  // Move Blinky down to proper ghost house position
+        );
+        const pinky = new Pinky(
+            this.scene, 
+            14 * TILE_SIZE + TILE_SIZE / 2, 
+            13 * TILE_SIZE + TILE_SIZE / 2  // Move Pinky up one tile
+        );
+        const inky = new Inky(
+            this.scene, 
+            12 * TILE_SIZE + TILE_SIZE / 2, 
+            13 * TILE_SIZE + TILE_SIZE / 2,  // Move Inky up one tile
+            blinky
+        );
+        const clyde = new Clyde(
+            this.scene, 
+            16 * TILE_SIZE + TILE_SIZE / 2, 
+            13 * TILE_SIZE + TILE_SIZE / 2  // Move Clyde up one tile
+        );
 
         this.ghosts = [blinky, pinky, inky, clyde];
-
-        // Set initial states
         this.setAllGhostsState(GhostState.SCATTER);
     }
 
@@ -143,22 +158,28 @@ export class GhostManager {
         // Release Pinky after 3 seconds
         this.ghostReleaseTimers.push(
             this.scene.time.delayedCall(3000, () => {
-                this.ghosts[1].exitGhostHouse();
-            })
+                if (this.ghosts[1]) {
+                    this.ghosts[1].exitGhostHouse();
+                }
+            }, [], this)
         );
 
         // Release Inky after 6 seconds
         this.ghostReleaseTimers.push(
             this.scene.time.delayedCall(6000, () => {
-                this.ghosts[2].exitGhostHouse();
-            })
+                if (this.ghosts[2]) {
+                    this.ghosts[2].exitGhostHouse();
+                }
+            }, [], this)
         );
 
         // Release Clyde after 9 seconds
         this.ghostReleaseTimers.push(
             this.scene.time.delayedCall(9000, () => {
-                this.ghosts[3].exitGhostHouse();
-            })
+                if (this.ghosts[3]) {
+                    this.ghosts[3].exitGhostHouse();
+                }
+            }, [], this)
         );
     }
 
