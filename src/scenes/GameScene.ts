@@ -17,6 +17,11 @@ export class GameScene extends Phaser.Scene {
   private mouthOpen: boolean = false;
   private mouthAnimationTimer!: Phaser.Time.TimerEvent;
   private ghostManager!: GhostManager;
+  private lives: number = 3;
+  private livesDisplay!: Phaser.GameObjects.Group;
+  private isPlayerDying: boolean = false;
+  private deathAnimationTimer: Phaser.Time.TimerEvent | null = null;
+  private deathRotation: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -46,6 +51,18 @@ export class GameScene extends Phaser.Scene {
 
     // Create wall texture
     this.createWallTexture();
+
+    // Create death animation frames
+    const deathGraphics = this.add.graphics();
+    for (let i = 0; i < 12; i++) {
+      deathGraphics.clear();
+      deathGraphics.lineStyle(2, 0xffff00);
+      deathGraphics.beginPath();
+      deathGraphics.arc(16, 16, 14, Math.PI * (i/6), Math.PI * (2 - i/6));
+      deathGraphics.strokePath();
+      deathGraphics.generateTexture('death-frame-' + i, 32, 32);
+    }
+    deathGraphics.destroy();
   }
 
   private createWallTexture(): void {
@@ -79,6 +96,21 @@ export class GameScene extends Phaser.Scene {
     // Generate the texture
     graphics.generateTexture('wall-enhanced', wallSize, wallSize);
     graphics.destroy();
+  }
+
+  private createLivesDisplay(): void {
+    this.livesDisplay = this.add.group();
+    
+    // Position lives in bottom-left corner
+    for (let i = 0; i < this.lives; i++) {
+      const lifeIcon = this.add.sprite(
+        50 + (i * 40), // x position
+        MAZE_HEIGHT - 30, // y position
+        'player'
+      );
+      lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      this.livesDisplay.add(lifeIcon);
+    }
   }
 
   create(): void {
@@ -150,6 +182,9 @@ export class GameScene extends Phaser.Scene {
 
     // Debug: Log all physics bodies in the scene
     console.log('All physics bodies:', this.physics.world.bodies.entries);
+
+    // Create lives display
+    this.createLivesDisplay();
   }
 
   private createMaze(): void {
@@ -302,20 +337,89 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerDeath(): void {
-    // TODO: Implement death animation and life system
-    console.log('Player died!');
-    this.resetLevel();
+    if (this.isPlayerDying) return;
+    this.isPlayerDying = true;
+
+    // Stop player movement
+    this.currentDirection = null;
+    this.nextDirection = null;
+    if (this.player?.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).velocity.set(0, 0);
+    }
+
+    // Stop ghost movement
+    this.ghostManager.pauseGhosts();
+
+    // Start death animation
+    let frame = 0;
+    this.deathAnimationTimer = this.time.addEvent({
+      delay: 100,
+      callback: () => {
+        if (!this.player) return;
+        
+        frame++;
+        if (frame <= 12) {
+          // Rotate player
+          this.deathRotation += Math.PI / 6;
+          this.player.setRotation(this.deathRotation);
+          
+          // Set frame
+          this.player.setTexture('death-frame-' + (frame - 1));
+        } else {
+          // Animation complete
+          this.deathAnimationTimer?.destroy();
+          this.deathAnimationTimer = null;
+          this.lives--;
+          
+          // Update lives display
+          this.updateLivesDisplay();
+          
+          if (this.lives > 0) {
+            // Reset level if lives remaining
+            this.resetLevel();
+          } else {
+            // Game over
+            this.events.emit('gameOver');
+          }
+        }
+      },
+      repeat: 12
+    });
+  }
+
+  private updateLivesDisplay(): void {
+    this.livesDisplay.clear(true, true);
+    
+    // Add remaining lives
+    for (let i = 0; i < this.lives; i++) {
+      const lifeIcon = this.add.sprite(
+        50 + (i * 40),
+        MAZE_HEIGHT - 30,
+        'player'
+      );
+      lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      this.livesDisplay.add(lifeIcon);
+    }
   }
 
   private resetLevel(): void {
+    // Reset player position and state
     if (this.player) {
       const playerStartX = MAZE_WIDTH / 2;
       const playerStartY = MAZE_HEIGHT - 1.5 * TILE_SIZE;
       this.player.setPosition(playerStartX, playerStartY);
+      this.player.setRotation(0);
+      this.player.setTexture('player');
       this.currentDirection = null;
       this.nextDirection = null;
     }
+    
+    // Reset ghosts
     this.ghostManager.resetGhosts();
+    
+    // Reset state flags
+    this.isPlayerDying = false;
+    this.deathRotation = 0;
   }
 
   private startMouthAnimation(): void {

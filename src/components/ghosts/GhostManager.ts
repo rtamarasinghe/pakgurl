@@ -24,6 +24,7 @@ export class GhostManager {
     private frightenedTimer: Phaser.Time.TimerEvent | null = null;
     private readonly FRIGHTENED_DURATION = 8000; // 8 seconds
     private ghostReleaseTimers: Phaser.Time.TimerEvent[] = [];
+    private isGhostsPaused: boolean = false;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -85,8 +86,27 @@ export class GhostManager {
         });
     }
 
+    public pauseGhosts(): void {
+        this.isGhostsPaused = true;
+        // Stop all ghost movement
+        this.ghosts.forEach(ghost => {
+            const sprite = ghost.getSprite();
+            if (sprite.body) {
+                (sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+            }
+        });
+    }
+
+    public resumeGhosts(): void {
+        this.isGhostsPaused = false;
+    }
+
     public update(player: Phaser.Physics.Arcade.Sprite | null): void {
-        this.ghosts.forEach(ghost => ghost.update(player));
+        if (this.isGhostsPaused) return;
+        
+        this.ghosts.forEach(ghost => {
+            ghost.update(player);
+        });
     }
 
     public handlePowerPelletCollected(): void {
