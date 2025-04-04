@@ -167,46 +167,68 @@ export class GhostManager {
         });
     }
 
+    public resetGhosts(): void {
+        // Stop any existing timers
+        this.ghostReleaseTimers.forEach(timer => timer.destroy());
+        this.ghostReleaseTimers = [];
+
+        // Reset all ghosts to ghost house
+        this.ghosts.forEach(ghost => {
+            ghost.returnToGhostHouse();
+        });
+
+        // Resume ghost movement
+        this.isGhostsPaused = false;
+
+        // Reset mode to initial scatter mode
+        this.currentPatternIndex = 0;
+        this.startModeTimer();
+
+        // Schedule new ghost releases with a delay to ensure proper positioning
+        this.scene.time.delayedCall(1000, () => {
+            this.scheduleGhostReleases();
+        });
+    }
+
     private scheduleGhostReleases(): void {
         // Clear any existing timers
         this.ghostReleaseTimers.forEach(timer => timer.destroy());
         this.ghostReleaseTimers = [];
 
-        // Release Blinky immediately
-        this.ghosts[0].exitGhostHouse();
-
-        // Release Pinky after 3 seconds
+        // Release Blinky after a short delay
         this.ghostReleaseTimers.push(
-            this.scene.time.delayedCall(3000, () => {
+            this.scene.time.delayedCall(1000, () => {
+                if (this.ghosts[0]) {
+                    this.ghosts[0].exitGhostHouse();
+                }
+            }, [], this)
+        );
+
+        // Release Pinky after 4 seconds
+        this.ghostReleaseTimers.push(
+            this.scene.time.delayedCall(4000, () => {
                 if (this.ghosts[1]) {
                     this.ghosts[1].exitGhostHouse();
                 }
             }, [], this)
         );
 
-        // Release Inky after 6 seconds
+        // Release Inky after 7 seconds
         this.ghostReleaseTimers.push(
-            this.scene.time.delayedCall(6000, () => {
+            this.scene.time.delayedCall(7000, () => {
                 if (this.ghosts[2]) {
                     this.ghosts[2].exitGhostHouse();
                 }
             }, [], this)
         );
 
-        // Release Clyde after 9 seconds
+        // Release Clyde after 10 seconds
         this.ghostReleaseTimers.push(
-            this.scene.time.delayedCall(9000, () => {
+            this.scene.time.delayedCall(10000, () => {
                 if (this.ghosts[3]) {
                     this.ghosts[3].exitGhostHouse();
                 }
             }, [], this)
         );
-    }
-
-    public resetGhosts(): void {
-        this.ghosts.forEach(ghost => ghost.returnToGhostHouse());
-        this.currentPatternIndex = 0;
-        this.startModeTimer();
-        this.scheduleGhostReleases();
     }
 } 

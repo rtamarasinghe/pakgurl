@@ -339,8 +339,13 @@ export abstract class Ghost {
         // Move to the ghost house exit position (just above the ghost house)
         const exitX = 14 * TILE_SIZE + TILE_SIZE / 2;  // Center of ghost house horizontally
         const exitY = 11 * TILE_SIZE + TILE_SIZE / 2;  // Just above ghost house
-        
-        // First move to exit position
+
+        // First move to center of ghost house
+        const centerX = 14 * TILE_SIZE + TILE_SIZE / 2;
+        const centerY = 14 * TILE_SIZE + TILE_SIZE / 2;
+        this.sprite.setPosition(centerX, centerY);
+
+        // Then move to exit position
         this.sprite.setPosition(exitX, exitY);
         
         // Set initial direction and state
@@ -354,20 +359,35 @@ export abstract class Ghost {
         if (this.sprite.body) {
             const body = this.sprite.body as Phaser.Physics.Arcade.Body;
             body.setVelocity(0, -this.speed);
+            body.setCollideWorldBounds(true);
+            // Ensure physics is enabled
+            body.setEnable(true);
         }
+
+        console.log(`Ghost ${this.ghostType} exiting ghost house at (${exitX}, ${exitY})`);
     }
 
     public returnToGhostHouse(): void {
-        // Ensure centered position when returning
-        const newX = Math.floor(this.startPosition.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
-        const newY = Math.floor(this.startPosition.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
-        this.sprite.setPosition(newX, newY);
+        // Calculate center position of ghost house
+        const centerX = 14 * TILE_SIZE + TILE_SIZE / 2;
+        const centerY = 14 * TILE_SIZE + TILE_SIZE / 2;
+        
+        // Reset position to ghost house center
+        this.sprite.setPosition(centerX, centerY);
+        
+        // Reset state
         this.ghostHouse = true;
         this.setState(GhostState.CHASE);
+        
+        // Stop movement and ensure physics is properly set
         if (this.sprite.body) {
             const body = this.sprite.body as Phaser.Physics.Arcade.Body;
             body.setVelocity(0, 0);
+            body.setCollideWorldBounds(true);
+            body.setEnable(true);
         }
+
+        console.log(`Ghost ${this.ghostType} returned to ghost house at (${centerX}, ${centerY})`);
     }
 
     public getState(): GhostState {
