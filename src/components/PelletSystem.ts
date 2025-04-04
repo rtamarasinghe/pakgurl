@@ -5,7 +5,6 @@ export class PelletSystem {
     private pellets: Phaser.Physics.Arcade.StaticGroup;
     private powerPellets: Phaser.Physics.Arcade.StaticGroup;
     private score: number = 0;
-    private scoreText: Phaser.GameObjects.Text;
     private powerPelletGlows: Map<string, Phaser.GameObjects.Container>;
     
     // Constants for scoring
@@ -17,12 +16,6 @@ export class PelletSystem {
         this.pellets = scene.physics.add.staticGroup();
         this.powerPellets = scene.physics.add.staticGroup();
         this.powerPelletGlows = new Map();
-        
-        // Create score text
-        this.scoreText = scene.add.text(16, 16, 'Score: 0', {
-            fontSize: '32px',
-            color: '#ffffff'
-        });
         
         this.createPellets();
     }
@@ -132,7 +125,7 @@ export class PelletSystem {
             player,
             this.pellets,
             (obj1, obj2) => {
-                this.collectPellet(
+                this.handlePelletCollection(
                     obj1 as Phaser.Physics.Arcade.Sprite,
                     obj2 as Phaser.Physics.Arcade.Sprite
                 );
@@ -146,7 +139,7 @@ export class PelletSystem {
             player,
             this.powerPellets,
             (obj1, obj2) => {
-                this.collectPowerPellet(
+                this.handlePowerPelletCollection(
                     obj1 as Phaser.Physics.Arcade.Sprite,
                     obj2 as Phaser.Physics.Arcade.Sprite
                 );
@@ -156,34 +149,35 @@ export class PelletSystem {
         );
     }
 
-    private collectPellet(player: Phaser.Physics.Arcade.Sprite, pellet: Phaser.Physics.Arcade.Sprite): void {
+    private handlePelletCollection(player: Phaser.Physics.Arcade.Sprite, pellet: Phaser.Physics.Arcade.Sprite): void {
+        // Remove the pellet
         pellet.destroy();
-        this.updateScore(PelletSystem.REGULAR_PELLET_POINTS);
+
+        // Update score
+        this.score += PelletSystem.REGULAR_PELLET_POINTS;
         
-        // Play collect sound (to be implemented)
-        // this.scene.sound.play('pellet-collect');
+        // Emit score update event instead of updating display directly
+        this.scene.events.emit('scoreUpdated', this.score);
     }
 
-    private collectPowerPellet(player: Phaser.Physics.Arcade.Sprite, powerPellet: Phaser.Physics.Arcade.Sprite): void {
+    private handlePowerPelletCollection(player: Phaser.Physics.Arcade.Sprite, powerPellet: Phaser.Physics.Arcade.Sprite): void {
         const container = this.powerPelletGlows.get(`${powerPellet.x},${powerPellet.y}`);
         if (container) {
             container.destroy();
             this.powerPelletGlows.delete(`${powerPellet.x},${powerPellet.y}`);
         }
         
+        // Remove the power pellet
         powerPellet.destroy();
-        this.updateScore(PelletSystem.POWER_PELLET_POINTS);
-        
-        // Emit event for power pellet collection
-        this.scene.events.emit('powerPelletCollected');
-        
-        // Play power pellet collect sound (to be implemented)
-        // this.scene.sound.play('power-pellet-collect');
-    }
 
-    private updateScore(points: number): void {
-        this.score += points;
-        this.scoreText.setText(`Score: ${this.score}`);
+        // Update score
+        this.score += PelletSystem.POWER_PELLET_POINTS;
+        
+        // Emit score update event instead of updating display directly
+        this.scene.events.emit('scoreUpdated', this.score);
+
+        // Emit power pellet collected event
+        this.scene.events.emit('powerPelletCollected');
     }
 
     public getRemainingPellets(): number {

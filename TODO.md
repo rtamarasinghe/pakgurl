@@ -35,8 +35,8 @@
 - [x] Add Pac-Man animations
   - [x] Mouth opening/closing
   - [x] Direction-based rotation
-  - [ ] Death animation
-- [ ] Implement lives system
+  - [x] Death animation
+- [x] Implement lives system
 - [x] Add player-ghost collision handling
 - [x] Improve movement to be grid-aligned
 - [x] Add power pellet effects on player

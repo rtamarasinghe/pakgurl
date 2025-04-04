@@ -22,6 +22,8 @@ export class GameScene extends Phaser.Scene {
   private isPlayerDying: boolean = false;
   private deathAnimationTimer: Phaser.Time.TimerEvent | null = null;
   private deathRotation: number = 0;
+  private scoreText!: Phaser.GameObjects.Text;
+  private score: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -98,18 +100,31 @@ export class GameScene extends Phaser.Scene {
     graphics.destroy();
   }
 
+  private createScoreDisplay(): void {
+    this.scoreText = this.add.text(
+        MAZE_WIDTH / 2,
+        TILE_SIZE / 2,
+        'Score: 0',
+        {
+            fontSize: '24px',
+            color: '#ffffff',
+            fontFamily: 'Arial'
+        }
+    ).setOrigin(0.5);
+  }
+
   private createLivesDisplay(): void {
     this.livesDisplay = this.add.group();
     
-    // Position lives in bottom-left corner
+    // Position lives in bottom-left corner, half a tile lower
     for (let i = 0; i < this.lives; i++) {
-      const lifeIcon = this.add.sprite(
-        50 + (i * 40), // x position
-        MAZE_HEIGHT - 30, // y position
-        'player'
-      );
-      lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
-      this.livesDisplay.add(lifeIcon);
+        const lifeIcon = this.add.sprite(
+            50 + (i * 40), // x position
+            MAZE_HEIGHT - (TILE_SIZE / 2), // Move down by half a tile
+            'player'
+        );
+        lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+        this.livesDisplay.add(lifeIcon);
     }
   }
 
@@ -130,6 +145,9 @@ export class GameScene extends Phaser.Scene {
 
     // Initialize teleport effects
     this.teleportEffects = new TeleportEffects(this);
+
+    // Create score display
+    this.createScoreDisplay();
 
     // Add player at starting position (center bottom of maze)
     const playerStartX = MAZE_WIDTH / 2;
@@ -179,6 +197,9 @@ export class GameScene extends Phaser.Scene {
 
     // Listen for player death
     this.events.on('playerDied', this.handlePlayerDeath, this);
+
+    // Listen for score updates
+    this.events.on('scoreUpdated', this.updateScore, this);
 
     // Debug: Log all physics bodies in the scene
     console.log('All physics bodies:', this.physics.world.bodies.entries);
@@ -388,17 +409,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateLivesDisplay(): void {
+    // Remove all life icons
     this.livesDisplay.clear(true, true);
     
-    // Add remaining lives
+    // Add remaining lives with adjusted position
     for (let i = 0; i < this.lives; i++) {
-      const lifeIcon = this.add.sprite(
-        50 + (i * 40),
-        MAZE_HEIGHT - 30,
-        'player'
-      );
-      lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
-      this.livesDisplay.add(lifeIcon);
+        const lifeIcon = this.add.sprite(
+            50 + (i * 40),
+            MAZE_HEIGHT - (TILE_SIZE / 2), // Keep consistent with createLivesDisplay
+            'player'
+        );
+        lifeIcon.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+        this.livesDisplay.add(lifeIcon);
     }
   }
 
@@ -506,6 +528,11 @@ export class GameScene extends Phaser.Scene {
       duration: 100,
       ease: 'Linear'
     });
+  }
+
+  private updateScore(newScore: number): void {
+    this.score = newScore;
+    this.scoreText.setText(`Score: ${this.score}`);
   }
 
   update(): void {
