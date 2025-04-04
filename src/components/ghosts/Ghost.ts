@@ -243,8 +243,9 @@ export abstract class Ghost {
 
         // Filter out invalid directions (walls, opposite of current direction)
         return directions.filter(dir => {
-            // Don't allow reversing unless frightened
+            // Don't allow reversing unless frightened or eaten
             if (this.state !== GhostState.FRIGHTENED && 
+                this.state !== GhostState.EATEN &&
                 dir.x === -this.currentDirection.x && 
                 dir.y === -this.currentDirection.y) {
                 return false;
@@ -264,10 +265,26 @@ export abstract class Ghost {
                 return false;
             }
 
-            // Get the tile type at the next position
+            // Get current and next tile types
+            const currentTile = MAZE_LAYOUT[currentTileY][currentTileX];
             const nextTile = MAZE_LAYOUT[nextTileY][nextTileX];
 
-            // Allow movement through paths, ghost house, and power pellet locations
+            // If in ghost house
+            if (this.ghostHouse) {
+                // Only allow moving up to exit if we're in the center column
+                if (dir.y === -1 && currentTile === TileType.GHOST_HOUSE) {
+                    return nextTile !== TileType.WALL;
+                }
+                // Allow movement within ghost house
+                return nextTile === TileType.GHOST_HOUSE;
+            }
+            
+            // If not in ghost house, don't allow moving back in unless eaten
+            if (nextTile === TileType.GHOST_HOUSE && this.state !== GhostState.EATEN) {
+                return false;
+            }
+
+            // Normal movement rules
             return nextTile !== TileType.WALL;
         });
     }
@@ -319,25 +336,38 @@ export abstract class Ghost {
     }
 
     public exitGhostHouse(): void {
-        this.ghostHouse = false;
         // Move to the ghost house exit position (just above the ghost house)
         const exitX = 14 * TILE_SIZE + TILE_SIZE / 2;  // Center of ghost house horizontally
         const exitY = 11 * TILE_SIZE + TILE_SIZE / 2;  // Just above ghost house
+        
+        // First move to exit position
         this.sprite.setPosition(exitX, exitY);
-        // Start with upward movement
+        
+        // Set initial direction and state
         this.currentDirection = new Phaser.Math.Vector2(0, -1);
         this.setState(GhostState.SCATTER);
+        
+        // Mark as out of ghost house AFTER setting position and direction
+        this.ghostHouse = false;
+        
         // Apply initial movement
-        this.sprite.setVelocity(0, -this.speed);
+        if (this.sprite.body) {
+            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+            body.setVelocity(0, -this.speed);
+        }
     }
 
     public returnToGhostHouse(): void {
-        this.ghostHouse = true;
         // Ensure centered position when returning
         const newX = Math.floor(this.startPosition.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
         const newY = Math.floor(this.startPosition.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
         this.sprite.setPosition(newX, newY);
+        this.ghostHouse = true;
         this.setState(GhostState.CHASE);
+        if (this.sprite.body) {
+            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+            body.setVelocity(0, 0);
+        }
     }
 
     public getState(): GhostState {
