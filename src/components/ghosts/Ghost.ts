@@ -37,9 +37,23 @@ export abstract class Ghost {
         this.sprite.setDisplaySize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
         this.sprite.setTint(this.getGhostColor());
         
-        // Set up physics
+        // Set up physics properly
         if (this.sprite.body) {
-            this.sprite.body.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+            const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+            body.setEnable(true);
+            body.setAllowGravity(false);
+            body.setCollideWorldBounds(true);
+            body.setBounce(0);
+            body.setDrag(0);
+            body.setFriction(0);
+            body.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+            body.setMaxVelocity(this.speed, this.speed);
+            
+            console.log(`=== Physics Setup for ${this.ghostType} ===`);
+            console.log(`Physics enabled: ${body.enable}`);
+            console.log(`Body position: (${body.x}, ${body.y})`);
+            console.log(`Body velocity: (${body.velocity.x}, ${body.velocity.y})`);
+            console.log(`Body size: ${body.width}x${body.height}`);
         }
 
         // Set scatter target based on ghost type
@@ -168,6 +182,11 @@ export abstract class Ghost {
         
         // Get valid directions at current position
         const validDirections = this.getValidDirections();
+        console.log(`Ghost ${this.ghostType} at (${this.sprite.x}, ${this.sprite.y})`);
+        console.log(`Current state: ${this.state}`);
+        console.log(`Target: (${target.x}, ${target.y})`);
+        console.log(`Valid directions:`, validDirections.map(d => `(${d.x}, ${d.y})`));
+        
         if (!validDirections.length) {
             this.sprite.setVelocity(0, 0);
             return;
@@ -175,50 +194,40 @@ export abstract class Ghost {
         
         // Choose the best direction
         const newDirection = this.chooseBestDirection(validDirections, target);
+        console.log(`Chosen direction: (${newDirection.x}, ${newDirection.y})`);
         this.moveInDirection(newDirection);
         this.currentDirection = newDirection;
     }
 
     private moveInDirection(direction: Phaser.Math.Vector2): void {
-        // Calculate the next position
-        const nextX = Math.floor(this.sprite.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
-        const nextY = Math.floor(this.sprite.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
+        if (!this.sprite.body || !this.sprite.body.enable) {
+            console.log(`Physics body not available or disabled for ${this.ghostType}`);
+            return;
+        }
 
-        // If we're not centered in a tile, move towards the center first
-        const distanceToCenter = Phaser.Math.Distance.Between(
-            this.sprite.x, this.sprite.y,
-            nextX, nextY
-        );
+        const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+        
+        // Calculate next tile position
+        const currentTileX = Math.floor(this.sprite.x / TILE_SIZE);
+        const currentTileY = Math.floor(this.sprite.y / TILE_SIZE);
+        const nextTileX = currentTileX + direction.x;
+        const nextTileY = currentTileY + direction.y;
 
-        if (distanceToCenter > 1) {
-            // Move towards tile center
-            const angle = Phaser.Math.Angle.Between(
-                this.sprite.x, this.sprite.y,
-                nextX, nextY
-            );
-            this.sprite.setVelocity(
-                Math.cos(angle) * this.speed,
-                Math.sin(angle) * this.speed
-            );
+        // Check if next tile is valid
+        const isValidTile = nextTileX >= 0 && 
+                          nextTileX < MAZE_LAYOUT[0].length &&
+                          nextTileY >= 0 && 
+                          nextTileY < MAZE_LAYOUT.length &&
+                          MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL;
+
+        if (isValidTile) {
+            // Set velocity in the chosen direction
+            body.setVelocity(direction.x * this.speed, direction.y * this.speed);
+            console.log(`Moving - Set velocity to (${body.velocity.x}, ${body.velocity.y})`);
+            console.log(`Current position: (${this.sprite.x}, ${this.sprite.y})`);
         } else {
-            // We're centered, check if the next tile in our direction is valid
-            const nextTileX = Math.floor((nextX + direction.x * TILE_SIZE) / TILE_SIZE);
-            const nextTileY = Math.floor((nextY + direction.y * TILE_SIZE) / TILE_SIZE);
-
-            // If next tile is valid, move in the desired direction
-            if (nextTileX >= 0 && nextTileX < MAZE_LAYOUT[0].length &&
-                nextTileY >= 0 && nextTileY < MAZE_LAYOUT.length &&
-                MAZE_LAYOUT[nextTileY][nextTileX] !== TileType.WALL) {
-                
-                this.sprite.setPosition(nextX, nextY);
-                this.sprite.setVelocity(
-                    direction.x * this.speed,
-                    direction.y * this.speed
-                );
-            } else {
-                // If next tile is not valid, stop and get new directions
-                this.sprite.setVelocity(0, 0);
-            }
+            body.setVelocity(0, 0);
+            console.log('Invalid tile - stopping movement');
         }
     }
 
@@ -269,35 +278,32 @@ export abstract class Ghost {
         }
 
         if (this.state === GhostState.FRIGHTENED) {
-            // Choose a random valid direction when frightened
             return Phaser.Math.RND.pick(validDirections);
         }
 
-        // Choose the direction that gets us closest to the target
-        let bestDirection = validDirections[0];
-        let bestDistance = Phaser.Math.Distance.Between(
-            this.sprite.x + bestDirection.x * TILE_SIZE,
-            this.sprite.y + bestDirection.y * TILE_SIZE,
-            target.x,
-            target.y
+        // Remove the opposite of current direction unless it's the only option
+        const nonReversing = validDirections.filter(dir => 
+            !(dir.x === -this.currentDirection.x && dir.y === -this.currentDirection.y)
         );
 
-        for (let i = 1; i < validDirections.length; i++) {
-            const direction = validDirections[i];
+        const directionsToConsider = nonReversing.length > 0 ? nonReversing : validDirections;
+
+        // Calculate distances for each valid direction
+        const distances = directionsToConsider.map(dir => {
+            const nextX = this.sprite.x + dir.x * TILE_SIZE;
+            const nextY = this.sprite.y + dir.y * TILE_SIZE;
             const distance = Phaser.Math.Distance.Between(
-                this.sprite.x + direction.x * TILE_SIZE,
-                this.sprite.y + direction.y * TILE_SIZE,
+                nextX,
+                nextY,
                 target.x,
                 target.y
             );
+            return { direction: dir, distance };
+        });
 
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestDirection = direction;
-            }
-        }
-
-        return bestDirection;
+        // Sort by distance (closest first)
+        distances.sort((a, b) => a.distance - b.distance);
+        return distances[0].direction;
     }
 
     protected updateGhostHouseBehavior(): void {
