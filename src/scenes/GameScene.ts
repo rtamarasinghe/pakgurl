@@ -2,6 +2,7 @@ import { MAZE_LAYOUT, TILE_SIZE, TileType, MAZE_WIDTH, MAZE_HEIGHT } from '../co
 import { TeleportEffects } from '../effects/TeleportEffects';
 import { PelletSystem } from '../components/PelletSystem';
 import { GhostManager } from '../components/ghosts/GhostManager';
+import { getAssetsPath } from '../config/assetConfig';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -31,19 +32,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load game assets
-    this.load.svg('player', 'assets/player.svg');
-    this.load.image('wall', 'assets/wall.png');
-    this.load.svg('dot', 'assets/dot.svg');
-    this.load.svg('power-pellet', 'assets/power-pellet.svg');
+    // Get the assets path from configuration
+    const basePath = getAssetsPath();
+    
+    // Load game assets with correct base path and file extensions
+    this.load.svg('player', `${basePath}player.svg`);
+    this.load.image('wall', `${basePath}wall.png`);
+    this.load.svg('dot', `${basePath}dot.svg`);
+    this.load.svg('power-pellet', `${basePath}power-pellet.svg`);
     
     // Load ghost assets
-    this.load.svg('ghost-blinky', 'assets/ghost-base.svg');
-    this.load.svg('ghost-pinky', 'assets/ghost-base.svg');
-    this.load.svg('ghost-inky', 'assets/ghost-base.svg');
-    this.load.svg('ghost-clyde', 'assets/ghost-base.svg');
-    this.load.svg('ghost-frightened', 'assets/ghost-frightened.svg');
-    this.load.svg('ghost-eaten', 'assets/ghost-eaten.svg');
+    this.load.svg('ghost-blinky', `${basePath}ghost-base.svg`);
+    this.load.svg('ghost-pinky', `${basePath}ghost-base.svg`);
+    this.load.svg('ghost-inky', `${basePath}ghost-base.svg`);
+    this.load.svg('ghost-clyde', `${basePath}ghost-base.svg`);
+    this.load.svg('ghost-frightened', `${basePath}ghost-frightened.svg`);
+    this.load.svg('ghost-eaten', `${basePath}ghost-eaten.svg`);
 
     // Create a white pixel texture for particles
     const graphics = this.add.graphics();
@@ -58,12 +62,12 @@ export class GameScene extends Phaser.Scene {
     // Create death animation frames
     const deathGraphics = this.add.graphics();
     for (let i = 0; i < 12; i++) {
-      deathGraphics.clear();
-      deathGraphics.lineStyle(2, 0xffff00);
-      deathGraphics.beginPath();
-      deathGraphics.arc(16, 16, 14, Math.PI * (i/6), Math.PI * (2 - i/6));
-      deathGraphics.strokePath();
-      deathGraphics.generateTexture('death-frame-' + i, 32, 32);
+        deathGraphics.clear();
+        deathGraphics.lineStyle(2, 0xffff00);
+        deathGraphics.beginPath();
+        deathGraphics.arc(16, 16, 14, Math.PI * (i/6), Math.PI * (2 - i/6));
+        deathGraphics.strokePath();
+        deathGraphics.generateTexture('death-frame-' + i, 32, 32);
     }
     deathGraphics.destroy();
   }
@@ -134,6 +138,12 @@ export class GameScene extends Phaser.Scene {
       console.error('Physics system not available');
       return;
     }
+
+    // Reset game state
+    this.score = 0;
+    this.lives = 3;
+    this.isGameOver = false;
+    this.isPlayerDying = false;
 
     // Set world bounds
     this.physics.world.setBounds(0, 0, MAZE_WIDTH, MAZE_HEIGHT);
@@ -482,6 +492,12 @@ export class GameScene extends Phaser.Scene {
     if (this.deathAnimationTimer) {
         this.deathAnimationTimer.destroy();
         this.deathAnimationTimer = null;
+    }
+
+    // Clean up score display
+    if (this.scoreText) {
+        this.scoreText.destroy();
+        this.scoreText = null as any;  // Reset to null, 'as any' used due to the strict type definition
     }
 
     // Reset all game state

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 24px;
+            display: none;
+        }
+        /* Add a container for game instructions */
+        #instructions {
+            color: #fff;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        /* Style for key indicators */
+        .key {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #333;
+            border-radius: 4px;
+            margin: 0 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading">Loading...</div>
+        <div id="game"></div>
+        <div id="instructions">
+            <p>Use <span class="key">←</span> <span class="key">↑</span> <span class="key">↓</span> <span class="key">→</span> to move Pac-Man</p>
+            <p>Collect all dots while avoiding ghosts!</p>
+            <p>Power pellets make ghosts vulnerable temporarily</p>
+            <p>Press <span class="key">SPACE</span> to restart when game is over</p>
+        </div>
+    </div>
+
+    <script>
+        // Show loading message
+        document.getElementById('loading').style.display = 'block';
+
+        // Determine paths based on environment
+        function getPaths() {
+            const href = window.location.href;
+            if (href.includes('github.io')) {
+                return {
+                    bundle: '/pakgurl/dist/bundle.js'
+                };
+            } else if (href.startsWith('http')) {
+                // Development server
+                return {
+                    bundle: '/dist/bundle.js'
+                };
+            } else {
+                // Local file
+                return {
+                    bundle: 'dist/bundle.js'
+                };
+            }
+        }
+
+        // Get bundle path
+        const paths = getPaths();
+
+        // Create and append the script element
+        const script = document.createElement('script');
+        script.src = paths.bundle;
+        script.onerror = function() {
+            console.error('Failed to load game script:', script.src);
+            document.getElementById('loading').textContent = 'Error loading game';
+        };
+        script.onload = function() {
+            // Hide loading message once everything is ready
+            document.getElementById('loading').style.display = 'none';
+        };
+        document.body.appendChild(script);
+    </script>
+</body>
+</html> 

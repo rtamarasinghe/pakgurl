@@ -22,9 +22,16 @@ module.exports = {
     },
   },
   devServer: {
-    static: {
-      directory: path.join(__dirname, 'public'),
-    },
+    static: [
+      {
+        directory: path.join(__dirname, 'public'),
+        publicPath: '/',
+      },
+      {
+        directory: path.join(__dirname, 'dist'),
+        publicPath: '/dist',
+      }
+    ],
     compress: true,
     port: 8080,
   },
