@@ -32,7 +32,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build  # Or your actual build directory
+          path: ./dist  # Or your actual build directory
 
   deploy:
     needs: build
