@@ -52,7 +52,7 @@
 - [ ] Add level display
 - [ ] Create lives display
 
-## Polish & Extras
+## Polish & Extras.
 - [ ] Add sound effects
 - [ ] Add background music
 - [ ] Create particle effects
