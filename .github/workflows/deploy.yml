@@ -31,8 +31,9 @@ jobs:
       - name: Prepare pages content
         run: |
           mkdir -p pages
-          cp index.html pages/
-          cp -r dist pages/dist
+          cp public/index.html pages/
+          cp dist/bundle.js pages
+          cp -a public/assets pages
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
