@@ -26,6 +26,8 @@ export abstract class Ghost {
     protected ghostHouse: boolean = true;
     protected ghostType: GhostType;
     protected startPosition: Phaser.Math.Vector2;
+    protected isWarningPhase: boolean = false;
+    protected warningFlashTimer: Phaser.Time.TimerEvent | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, texture: string, ghostType: GhostType) {
         this.scene = scene;
@@ -87,6 +89,16 @@ export abstract class Ghost {
             repeat: -1
         });
 
+        // Frightened warning animation (white)
+        this.scene.anims.create({
+            key: `${this.ghostType}-frightened-warning`,
+            frames: [
+                { key: 'ghost-frightened', frame: 0 }
+            ],
+            frameRate: 10,
+            repeat: -1
+        });
+
         // Eaten animation (eyes only)
         this.scene.anims.create({
             key: `${this.ghostType}-eaten`,
@@ -131,12 +143,19 @@ export abstract class Ghost {
 
     public setState(newState: GhostState): void {
         this.state = newState;
+        this.isWarningPhase = false;
+        
+        if (this.warningFlashTimer) {
+            this.warningFlashTimer.destroy();
+            this.warningFlashTimer = null;
+        }
         
         // Update appearance and behavior based on state
         switch (newState) {
             case GhostState.FRIGHTENED:
                 this.speed = 75; // Slower when frightened
                 this.sprite.play(`${this.ghostType}-frightened`);
+                this.sprite.setTint(0x0000ff); // Blue tint
                 // Reverse direction
                 this.currentDirection.scale(-1);
                 break;
@@ -144,12 +163,41 @@ export abstract class Ghost {
             case GhostState.EATEN:
                 this.speed = 200; // Faster when eaten
                 this.sprite.play(`${this.ghostType}-eaten`);
+                this.sprite.clearTint();
                 break;
             
             default:
                 this.speed = 150; // Normal speed
                 this.sprite.play(`${this.ghostType}-normal`);
+                this.sprite.setTint(this.getGhostColor());
                 break;
+        }
+    }
+
+    public setWarningPhase(warning: boolean): void {
+        if (this.state !== GhostState.FRIGHTENED) return;
+        
+        this.isWarningPhase = warning;
+        
+        if (warning) {
+            // Start flashing between blue and white
+            let isBlue = true;
+            this.warningFlashTimer = this.scene.time.addEvent({
+                delay: 200, // Flash every 200ms
+                callback: () => {
+                    if (this.state === GhostState.FRIGHTENED) {
+                        this.sprite.setTint(isBlue ? 0x0000ff : 0xffffff);
+                        isBlue = !isBlue;
+                    }
+                },
+                loop: true
+            });
+        } else {
+            if (this.warningFlashTimer) {
+                this.warningFlashTimer.destroy();
+                this.warningFlashTimer = null;
+            }
+            this.sprite.setTint(0x0000ff);
         }
     }
 

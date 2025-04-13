@@ -23,8 +23,10 @@ export class GhostManager {
     private currentPatternIndex = 0;
     private frightenedTimer: Phaser.Time.TimerEvent | null = null;
     private readonly FRIGHTENED_DURATION = 8000; // 8 seconds
+    private readonly WARNING_DURATION = 2000; // 2 seconds warning before frightened mode ends
     private ghostReleaseTimers: Phaser.Time.TimerEvent[] = [];
     private isGhostsPaused: boolean = false;
+    private ghostsEatenCount: number = 0; // Track number of ghosts eaten during frightened mode
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -139,6 +141,9 @@ export class GhostManager {
             this.frightenedTimer.destroy();
         }
 
+        // Reset ghosts eaten count
+        this.ghostsEatenCount = 0;
+
         // Set all non-eaten ghosts to frightened state
         this.ghosts.forEach(ghost => {
             if (ghost.getState() !== GhostState.EATEN) {
@@ -146,9 +151,26 @@ export class GhostManager {
             }
         });
 
-        // Start frightened timer
+        // Start frightened timer with warning phase
         this.frightenedTimer = this.scene.time.delayedCall(
-            this.FRIGHTENED_DURATION,
+            this.FRIGHTENED_DURATION - this.WARNING_DURATION,
+            () => this.startWarningPhase(),
+            undefined,
+            this
+        );
+    }
+
+    private startWarningPhase(): void {
+        // Set all frightened ghosts to warning state
+        this.ghosts.forEach(ghost => {
+            if (ghost.getState() === GhostState.FRIGHTENED) {
+                ghost.setWarningPhase(true);
+            }
+        });
+
+        // Start timer for end of frightened mode
+        this.frightenedTimer = this.scene.time.delayedCall(
+            this.WARNING_DURATION,
             () => this.endFrightenedMode(),
             undefined,
             this
@@ -158,6 +180,7 @@ export class GhostManager {
     private endFrightenedMode(): void {
         this.ghosts.forEach(ghost => {
             if (ghost.getState() === GhostState.FRIGHTENED) {
+                ghost.setWarningPhase(false);
                 ghost.setState(this.currentMode === 'chase' ? GhostState.CHASE : GhostState.SCATTER);
             }
         });
@@ -166,7 +189,35 @@ export class GhostManager {
 
     public handleGhostEaten(ghost: Ghost): void {
         ghost.setState(GhostState.EATEN);
-        // Add score or other effects here
+        
+        // Calculate points based on number of ghosts eaten
+        // 200 for first ghost, doubles for each subsequent ghost (200, 400, 800, 1600)
+        const points = 200 * Math.pow(2, this.ghostsEatenCount);
+        this.ghostsEatenCount++;
+        
+        // Update score
+        this.scene.events.emit('scoreUpdated', points);
+        
+        // Emit ghost eaten event for sound effect
+        this.scene.events.emit('ghostEaten');
+        
+        // Show score text at ghost's position
+        const pos = ghost.getPosition();
+        const scoreText = this.scene.add.text(pos.x, pos.y, points.toString(), {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontFamily: 'Arial'
+        }).setOrigin(0.5);
+        
+        // Animate score text floating up and fading out
+        this.scene.tweens.add({
+            targets: scoreText,
+            y: pos.y - 40,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power1',
+            onComplete: () => scoreText.destroy()
+        });
     }
 
     public handlePlayerCollision(ghost: Ghost, player: Phaser.Physics.Arcade.Sprite): void {

@@ -3,6 +3,7 @@ import { TeleportEffects } from '../effects/TeleportEffects';
 import { PelletSystem } from '../components/PelletSystem';
 import { GhostManager } from '../components/ghosts/GhostManager';
 import { getAssetsPath } from '../config/assetConfig';
+import { SoundManager } from '../audio/SoundManager';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -26,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private score: number = 0;
   private isGameOver: boolean = false;
+  private soundManager!: SoundManager;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -139,6 +141,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Initialize sound manager
+    this.soundManager = new SoundManager(this);
+
     // Reset game state
     this.score = 0;
     this.lives = 3;
@@ -204,13 +209,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Listen for power pellet collection
-    this.events.on('powerPelletCollected', this.handlePowerPelletCollected, this);
+    this.events.on('powerPelletCollected', () => {
+      this.soundManager.playPowerPellet();
+      this.handlePowerPelletCollected();
+    }, this);
 
     // Listen for player death
     this.events.on('playerDied', this.handlePlayerDeath, this);
 
     // Listen for score updates
     this.events.on('scoreUpdated', this.updateScore, this);
+
+    // Listen for ghost eaten
+    this.events.on('ghostEaten', () => {
+      this.soundManager.playGhostEaten();
+    }, this);
 
     // Debug: Log all physics bodies in the scene
     console.log('All physics bodies:', this.physics.world.bodies.entries);
