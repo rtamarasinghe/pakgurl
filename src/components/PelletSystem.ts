@@ -63,8 +63,8 @@ export class PelletSystem {
         middleGlow.setAlpha(0.4);
         middleGlow.setTint(0x00ffff);
 
-        // Create the main power pellet sprite
-        const powerPellet = this.powerPellets.create(0, 0, 'power-pellet');
+        // Create the main power pellet sprite with physics
+        const powerPellet = this.powerPellets.create(x, y, 'power-pellet') as Phaser.Physics.Arcade.Sprite;
         powerPellet.setDisplaySize(TILE_SIZE * 0.6, TILE_SIZE * 0.6);
         
         // Set the physics body size to match the visible power pellet
@@ -73,9 +73,6 @@ export class PelletSystem {
             body.setSize(TILE_SIZE * 0.6, TILE_SIZE * 0.6);
             body.updateFromGameObject();
         }
-
-        // Add everything to the container
-        container.add([outerGlow, middleGlow, powerPellet]);
 
         // Store reference to the container
         this.powerPelletGlows.set(`${x},${y}`, container);

@@ -11,7 +11,7 @@ export class SoundManager {
     }
 
     private loadSounds(): void {
-        const basePath = getAssetsPath();
+        const basePath = getAssetsPath() + 'audio/';
         
         // Load sound effects
         this.scene.load.audio('power-pellet', `${basePath}power-pellet.wav`);

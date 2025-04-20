@@ -144,10 +144,16 @@ export class GhostManager {
         // Reset ghosts eaten count
         this.ghostsEatenCount = 0;
 
-        // Set all non-eaten ghosts to frightened state
+        // Set all non-eaten ghosts to frightened state and reverse their direction
         this.ghosts.forEach(ghost => {
             if (ghost.getState() !== GhostState.EATEN) {
                 ghost.setState(GhostState.FRIGHTENED);
+                // Get the ghost's sprite and reverse its velocity
+                const sprite = ghost.getSprite();
+                if (sprite.body) {
+                    const body = sprite.body as Phaser.Physics.Arcade.Body;
+                    body.setVelocity(-body.velocity.x, -body.velocity.y);
+                }
             }
         });
 
