@@ -31,6 +31,7 @@ jobs:
       - name: Prepare pages content
         run: |
           mkdir -p pages
+          cp dist/bundle.js pages/
           cp index.html pages/
           cp -a public/assets pages
 
